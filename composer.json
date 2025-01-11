@@ -1,0 +1,33 @@
+{
+  "name": "glider88/fixturization",
+  "version": "0.0.1",
+  "description": "Create fixtures from database",
+  "keywords": ["fixtures"],
+  "type": "library",
+  "minimum-stability": "dev",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Sakharov Pavel",
+      "email": "s.p.alekseevich@gmail.com"
+    }
+  ],
+  "require": {
+    "php": "^8.2",
+    "symfony/yaml": "^7.2.0",
+    "doctrine/dbal": "^4.2.0"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^11.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Glider88\\Fixturization\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Tests\\Glider88\\Fixturization\\": "tests/"
+    }
+  }
+}

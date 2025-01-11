@@ -1,0 +1,4 @@
+entrypoint:
+  -
+    table: country
+    count: 10

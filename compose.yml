@@ -1,0 +1,38 @@
+services:
+  php-cli:
+    container_name: fixturization-php-cli
+    build: .docker/php-cli
+    image: fixturization/php-cli
+    user: docker
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    volumes:
+      - .docker/php-cli/xdebug.ini:/usr/local/etc/php/conf.d/xdebug.ini
+      - .docker/php-cli/custom-php.ini:/usr/local/etc/php/conf.d/custom-php.ini
+      - .:/usr/src/app
+    networks: [app]
+  composer:
+      container_name: fixturization-composer
+      image: composer
+      user: 1000:1000
+      volumes:
+          - .:/app
+      command: install
+  postgres:
+      container_name: fixturization-postgres
+      image: postgres:alpine
+      environment:
+          - POSTGRES_DB=${POSTGRES_DB}
+          - POSTGRES_USER=${POSTGRES_USER}
+          - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      ports:
+          - "5432:5432"
+      volumes:
+          - .docker/postgres/pagila-schema.sql:/docker-entrypoint-initdb.d/1-pagila-schema.sql
+          - .docker/postgres/pagila-data.sql:/docker-entrypoint-initdb.d/2-pagila-data.sql
+      hostname: db
+      networks: [app]
+
+networks:
+    app:
+        driver: bridge
