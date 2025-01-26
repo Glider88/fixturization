@@ -10,6 +10,8 @@ services:
       - .docker/php-cli/xdebug.ini:/usr/local/etc/php/conf.d/xdebug.ini
       - .docker/php-cli/custom-php.ini:/usr/local/etc/php/conf.d/custom-php.ini
       - .:/usr/src/app
+    environment:
+        PHP_IDE_CONFIG: "serverName=docker-fixturization-php"
     networks: [app]
   composer:
       container_name: fixturization-composer
