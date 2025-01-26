@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+docker compose exec --user docker php-cli sh -c "rm examples/var/fixture/rewritten-* && rm examples/var/schema/rewritten-*"

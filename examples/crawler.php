@@ -28,7 +28,7 @@ $baseDir = __DIR__;
 
 $path = Path::newInstance(
     projectDir: $baseDir,
-    entrypointPath: './config/entrypoint.yaml',
+    entrypointPath: './config/config.yaml',
     fixtureYamlPath: './var/fixture/data.yaml',
     fixtureSqlPath: './var/fixture/data.sql',
     schemaDbPath: './var/schema/auto-db.yaml',
