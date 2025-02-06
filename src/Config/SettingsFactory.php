@@ -2,35 +2,46 @@
 
 namespace Glider88\Fixturization\Config;
 
+use Glider88\Fixturization\Filter\FilterInterface;
 use Glider88\Fixturization\Transformer\TransformerInterface;
-use Symfony\Component\Yaml\Yaml;
 
-readonly class ColumnsFactory
+readonly class SettingsFactory
 {
-    /** @param array<TransformerInterface> $transformers */
+    /** @param array<string, TransformerInterface> $transformersMapper */
+    /** @param array<string, FilterInterface> $filtersMapper */
     public function __construct(
-        private Path $path,
-        private array $transformers = [],
+        private array $transformersMapper = [],
+        private array $filtersMapper = [],
     ) {}
 
-    public function create(): Columns
+    public function create(array $config): Settings
     {
-        $entrypointConfig = Yaml::parseFile($this->path->configPath) ?? [];
-        $columns = $entrypointConfig['column'] ?? [];
+        $tables = $config['settings']['tables'] ?? [];
 
-        $result = [];
-        foreach ($columns as $c) {
-            $column = $c['column'];
-            $table = $c['table'];
-            $transformers = [];
-            $transformerNames = $c['transformer'] ?? [];
-            foreach ($transformerNames as $name) {
-                $transformers[$name] = $this->transformers[$name];
+        $settings = [];
+        foreach ($tables as $tableName => $tableConfig) {
+            $columns = $tableConfig['columns'] ?? [];
+            $columnSettings = [];
+            foreach ($columns as $columnName => $columnConfig) {
+                $transformerNames = $columnConfig['transformers'] ?? [];
+                $filtersNames = $columnConfig['filters'] ?? [];
+
+                $transformers = [];
+                foreach ($transformerNames as $name) {
+                    $transformers[$name] = $this->transformersMapper[$name];
+                }
+
+                $filters = [];
+                foreach ($filtersNames as $name) {
+                    $filters[$name] = $this->filtersMapper[$name];
+                }
+
+                $columnSettings[$columnName] = new ColumnSettings($tableName, $columnName, $transformers, $filters);
             }
 
-            $result[$table][$column] = new Column($table, $column, $transformers);
+            $settings[$tableName] = new TableSettings($columnSettings);
         }
 
-        return new Columns($result);
+        return new Settings($settings);
     }
 }

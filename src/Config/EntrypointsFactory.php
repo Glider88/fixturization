@@ -12,8 +12,8 @@ readonly class EntrypointsFactory
 
     public function create(): Entrypoints
     {
-        $entrypointConfig = Yaml::parseFile($this->path->entrypointPath) ?? [];
-        $entrypoints = $entrypointConfig['entrypoint'] ?? [];
+        $entrypointConfig = Yaml::parseFile($this->path->configPath) ?? [];
+        $entrypoints = $entrypointConfig['entrypoints'] ?? [];
 
         $tables = [];
         foreach ($entrypoints as $e) {

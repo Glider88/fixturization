@@ -1,9 +1,23 @@
-entrypoint:
+#routes:
+#  - []
+
+entrypoints:
   -
     table: country
     count: 10
+#    settings_by_table:
+#      actor:
+#        count: 1-3
 
-
-column:
-  -
-    table:
+settings:
+  tables:
+    address:
+      columns:
+        phone:
+          transformers:
+            - column_shuffle
+    staff:
+      columns:
+        username:
+          filters:
+            - column_first_s

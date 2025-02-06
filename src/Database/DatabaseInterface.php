@@ -18,11 +18,8 @@ interface DatabaseInterface
 
     public function randomRows(string $table, array $columns, ?int $count): array;
 
-    /**
-     * @param array<string> $columns
-     * @param array<string> $whereColumns
-     */
-    public function row(string $table, array $columns, array $whereColumns, array $whereValues): array;
+    /** @param array<string> $columns */
+    public function row(string $table, array $columns, WhereClause ...$whereClauses): array;
 
     public function setSeed(float $seed): void;
 

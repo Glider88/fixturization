@@ -4,23 +4,19 @@ namespace Glider88\Fixturization\Config;
 
 readonly class TableSettings
 {
-    /** @param array<string, ColumnSettings> $tableToColumnSettings */
+    /** @param array<string, ColumnSettings> $columnToColumnSettings */
     public function __construct(
-        private array $tableToColumnSettings,
+        private array $columnToColumnSettings,
     ) {}
 
-    public function columnSettings(string $tableName): ColumnSettings
+    public function columnSettings(string $columnName): ?ColumnSettings
     {
-        if (! array_key_exists($tableName, $this->tableToColumnSettings)) {
-            throw new \InvalidArgumentException("Table '$tableName' does not exist in TableSettings");
-        }
-
-        return $this->tableToColumnSettings[$tableName];
+        return $this->columnToColumnSettings[$columnName] ?? null;
     }
 
-    /** @return array<string, ColumnSettings> table name -> ColumnSettings */
+    /** @return array<string, ColumnSettings> column name -> ColumnSettings */
     public function all(): array
     {
-        return $this->tableToColumnSettings;
+        return $this->columnToColumnSettings;
     }
 }

@@ -4,7 +4,7 @@ namespace Glider88\Fixturization\Config;
 
 readonly class Path {
     private function __construct(
-        public ?string $entrypointPath = null,
+        public ?string $configPath = null,
         public ?string $fixtureYamlPath = null,
         public ?string $fixtureSqlPath = null,
         public ?string $schemaDbPath = null,
@@ -12,8 +12,8 @@ readonly class Path {
     ) {}
 
     public static function newInstance(
-        string $projectDir,
-        ?string $entrypointPath = null,
+        string  $projectDir,
+        ?string $configPath = null,
         ?string $fixtureYamlPath = null,
         ?string $fixtureSqlPath = null,
         ?string $schemaDbPath = null,
@@ -21,7 +21,7 @@ readonly class Path {
     ): Path
     {
         $yamls = array_filter([
-            $entrypointPath,
+            $configPath,
             $fixtureYamlPath,
             $schemaDbPath,
             $schemaManualPath,
@@ -37,7 +37,7 @@ readonly class Path {
         $fn = static fn(?string $path) => $path === null ? null : $projectDir . $path;
 
         return new Path(
-            entrypointPath: $fn($entrypointPath),
+            configPath: $fn($configPath),
             fixtureYamlPath: $fn($fixtureYamlPath),
             fixtureSqlPath: $fn($fixtureSqlPath),
             schemaDbPath: $fn($schemaDbPath),
