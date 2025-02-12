@@ -11,7 +11,7 @@ use Glider88\Fixturization\FileGenerator\PostgresSqlTransformer;
 use Glider88\Fixturization\Filter\ColumnFilter;
 use Glider88\Fixturization\Schema\SchemaFactory;
 use Glider88\Fixturization\Schema\SchemaMerger;
-use Glider88\Fixturization\Spider;
+use Glider88\Fixturization\Spider\Spider;
 use Doctrine\DBAL\DriverManager;
 use Glider88\Fixturization\Transformer\ColumnShuffle;
 use Symfony\Component\Yaml\Yaml;

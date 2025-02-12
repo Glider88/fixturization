@@ -1,14 +1,15 @@
 <?php declare(strict_types=1);
 
-namespace Glider88\Fixturization;
+namespace Glider88\Fixturization\Spider;
 
+use Glider88\Fixturization\Config\Entrypoint;
 use Glider88\Fixturization\Config\Settings;
-use Glider88\Fixturization\Config\Entrypoints;
 use Glider88\Fixturization\Config\TableSettings;
 use Glider88\Fixturization\Database\DatabaseInterface;
 use Glider88\Fixturization\Database\WhereClause;
 use Glider88\Fixturization\Schema\Schema;
 
+// ToDo: film 2*-> language
 readonly class Spider
 {
     public function __construct(
@@ -18,68 +19,59 @@ readonly class Spider
         private ?int              $seed = null,
     ) {}
 
-    public function start(Entrypoints $entrypoints): array
+    /**
+     * @param array<Entrypoint> $entrypoints
+     * @return array<string, array<int|string, array>>
+     */
+    public function start(array $entrypoints): array
     {
         $this->setSeed();
 
-        $result = [];
-        foreach ($entrypoints->all() as $entryTable => $entrypoint) {
-            $tableSchema = $this->schema->table($entryTable);
-            $rows = $this->db->randomRows($entryTable, $tableSchema->cols, $entrypoint->count);
-            foreach ($rows as $row) {
-                $whereClauses = [];
-                foreach ($tableSchema->pk as $idCol) {
-                    $whereClauses[] = WhereClause::new($idCol, '=', $row[$idCol]);
-                }
-
-                foreach ($this->result($entryTable, ...$whereClauses) as $tableName => $idToInfo) {
-                    foreach ($idToInfo as $rowId => $res) {
-                        $result[$tableName][$rowId] = $res;
+        $results = [];
+        foreach ($entrypoints as $entrypoint) {
+            foreach ($entrypoint->roots as $root) {
+                $tableSchema = $this->schema->table($root->tableName);
+                $rows = $this->db->randomRows($root->tableName, $tableSchema->cols, $entrypoint->count);
+                foreach ($rows as $row) {
+                    $whereClauses = [];
+                    foreach ($tableSchema->pk as $idCol) {
+                        $whereClauses[] = WhereClause::new($idCol, '=', $row[$idCol]);
                     }
+
+                    $results[] = $this->result($root, ...$whereClauses);
                 }
             }
         }
 
-        return $result;
+        return Result::mergeAll($results)->result();
     }
 
-    private function result(string $tableName, WhereClause ...$whereClauses): array
+    private function result(Node $node, WhereClause ...$whereClauses): Result
     {
+        $tableName = $node->tableName;
         $tableSchema = $this->schema->table($tableName);
         $tableSettings = $this->settings->tableSettings($tableName);
-//        $tableRows = $this->db->row($tableName, $tableSchema->cols, ...$whereClauses);
         $tableRows = $this->fetchRow($tableName, ...$whereClauses);
 
         if (empty($tableRows)) {
-            return [];
+            return Result::newEmpty();
         }
 
         $tableRowRaw = $tableRows[array_rand($tableRows)];
         $tableRow = $this->processRow($tableSettings, $tableRowRaw);
 
-        $nextWhereClauses = [];
-        foreach ($tableSchema->pk as $idCol) {
-            $nextWhereClauses[] = WhereClause::new($idCol, '=', $tableRow[$idCol]);
+        if (empty($node->children)) {
+            return Result::new(Status::Done, $tableSchema, [$tableRow]);
         }
 
-        $idsString = implode('|', array_map(static fn(WhereClause $w) => $w->value, $nextWhereClauses));
-        $result[$tableName][$idsString] = $tableRow;
-
-        $linkResults = [];
-        foreach ($tableSchema->refs as $linkTable => $linkFk) {
-//            $linkResults[] = $this->result($linkTable, [$linkFk], $ids);
-            $linkResults[] = $this->result($linkTable, ...$nextWhereClauses);
+        $linkResults = [Result::new(Status::Done, $tableSchema, [$tableRow])];
+        foreach ($node->children as $child) {
+            $link = $this->schema->link($node->tableName, $child->tableName);
+            $nextWhereClauses = WhereClause::new($link->linkColumn, '=', $tableRow[$link->ownColumn]);
+            $linkResults[] = $this->result($child, $nextWhereClauses);
         }
 
-        foreach ($linkResults as $linkResult) {
-            foreach ($linkResult as $name => $idToInfo) {
-                foreach ($idToInfo as $rowId => $res) {
-                    $result[$name][$rowId] = $res;
-                }
-            }
-        }
-
-        return $result;
+        return Result::mergeAll($linkResults);
     }
 
     private function setSeed(): void

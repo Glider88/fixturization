@@ -1,13 +1,15 @@
-#routes:
-#  - []
-
 entrypoints:
   -
-    table: country
     count: 10
-#    settings_by_table:
-#      actor:
-#        count: 1-3
+    routes:
+      - [rental, customer, address, city, country]
+      - [rental, customer, store, address, city, country]
+      - [rental, inventory, film, film_actor, actor]
+      - [rental, inventory, film, film_category, category]
+      - [rental, inventory, film, language]
+      - [rental, inventory, store, address, city, country]
+      - [rental, staff, address, city, country]
+      - [rental, staff, store, address, city, country]
 
 settings:
   tables:

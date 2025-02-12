@@ -15,19 +15,18 @@ readonly class SchemaFactory
     public function create(): Schema
     {
         $schema = $this->schema();
-        $fixedSchema = $this->fix($schema);
+        $links = $this->links($schema);
 
         $tables = [];
-        foreach ($fixedSchema as $tableName => $tableConf) {
+        foreach ($schema as $tableName => $tableConf) {
             $tables[$tableName] = new TableMeta(
                 $tableName,
                 (array) $tableConf['pk'],
                 $tableConf['columns'] ?? [],
-                $tableConf['links'] ?? [],
             );
         }
 
-        return new Schema($tables);
+        return new Schema($tables, $links);
     }
 
     private function schema(): array
@@ -39,22 +38,27 @@ readonly class SchemaFactory
         return $this->merger->merge($schemaDb, $schemaManual);
     }
 
-    private function fix(array $schema): array
+    private function links(array $schema): array
     {
         $result = [];
         foreach ($schema as $tableName => $tableConf) {
-            $row = $tableConf;
-            if (array_key_exists('foreign_keys', $row)) {
+            if (array_key_exists('foreign_keys', $tableConf)) {
                 foreach ($tableConf['foreign_keys'] as $fkColumn => $refTable) {
-                    $result[$refTable]['links'][$tableName] = $fkColumn;
+                    $result[$tableName][$refTable] = new Link(
+                        LinkType::ManyToOne,
+                        $tableName,
+                        $fkColumn,
+                        $refTable,
+                        $schema[$refTable]['pk'],
+                    );
+                    $result[$refTable][$tableName] = new Link(
+                        LinkType::OneToMany,
+                        $refTable,
+                        $schema[$refTable]['pk'],
+                        $tableName,
+                        $fkColumn,
+                    );
                 }
-                unset($row['foreign_keys']);
-            }
-
-            if (array_key_exists($tableName, $result)) {
-                $result[$tableName] = array_merge($result[$tableName], $row);
-            } else {
-                $result[$tableName] = $row;
             }
         }
 

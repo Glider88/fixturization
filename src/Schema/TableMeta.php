@@ -7,12 +7,10 @@ readonly class TableMeta
     /**
      * @param array<string> $pk
      * @param array<string> $cols
-     * @param array<string, string> $refs ref table name -> ref table foreign key
      */
     public function __construct(
         public string $name,
         public array  $pk,
         public array  $cols,
-        public array  $refs,
     ) {}
 }

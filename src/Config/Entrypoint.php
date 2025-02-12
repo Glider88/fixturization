@@ -2,10 +2,13 @@
 
 namespace Glider88\Fixturization\Config;
 
+use Glider88\Fixturization\Spider\Node;
+
 readonly class Entrypoint
 {
+    /** @param array<Node> $roots */
     public function __construct(
-        public string $table,
-        public ?int $count,
+        public array $roots,
+        public int $count,
     ) {}
 }
