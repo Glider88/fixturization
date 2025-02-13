@@ -7,7 +7,13 @@ readonly class TableSettings
     /** @param array<string, ColumnSettings> $columnToColumnSettings */
     public function __construct(
         private array $columnToColumnSettings,
+        private ?int $count,
     ) {}
+
+    public function count(): int
+    {
+        return $this->count ?: 1;
+    }
 
     public function columnSettings(string $columnName): ?ColumnSettings
     {

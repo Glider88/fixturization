@@ -9,6 +9,6 @@ readonly class Entrypoint
     /** @param array<Node> $roots */
     public function __construct(
         public array $roots,
-        public int $count,
+        public Settings $settings,
     ) {}
 }

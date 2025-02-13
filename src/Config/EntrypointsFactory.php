@@ -2,6 +2,7 @@
 
 namespace Glider88\Fixturization\Config;
 
+use Glider88\Fixturization\Common\Arr;
 use Glider88\Fixturization\Spider\Node;
 use Symfony\Component\Yaml\Yaml;
 
@@ -9,6 +10,8 @@ readonly class EntrypointsFactory
 {
     public function __construct(
         private Path $path,
+        private SettingsMerger $merger,
+        private SettingsFactory $settingsFactory,
     ) {}
 
     /** @return array<Entrypoint> */
@@ -19,7 +22,10 @@ readonly class EntrypointsFactory
 
         $entrypoints = [];
         foreach ($entrypointConfig as $e) {
-            $entrypoints[] = new Entrypoint($this->node($e['routes']), $e['count']);
+            $settingsConfig = $e['settings'] ?? [];
+            $merged = $this->merger->merge($settingsConfig);
+            $settings = $this->settingsFactory->create($merged);
+            $entrypoints[] = new Entrypoint($this->node($e['routes']), $settings);
         }
 
         return $entrypoints;
@@ -31,16 +37,13 @@ readonly class EntrypointsFactory
      */
     private function node(array $routes): array
     {
-        $headFn = static fn(array $array) => current($array);
-        $tailFn = static fn(array $array) => array_slice($array, 1);
-
         $headToRoutes = [];
         foreach ($routes as $route) {
             if (empty($route)) {
                 continue;
             }
 
-            $headToRoutes[$headFn($route)][] = $tailFn($route);
+            $headToRoutes[Arr::head($route)][] = Arr::tail($route);
         }
 
         $result = [];

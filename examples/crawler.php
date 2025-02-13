@@ -5,6 +5,7 @@ require_once __DIR__ . '/../vendor/autoload.php';
 use Glider88\Fixturization\Config\SettingsFactory;
 use Glider88\Fixturization\Config\EntrypointsFactory;
 use Glider88\Fixturization\Config\Path;
+use Glider88\Fixturization\Config\SettingsMerger;
 use Glider88\Fixturization\Database\PostgreSQL;
 use Glider88\Fixturization\FileGenerator\FileSaver;
 use Glider88\Fixturization\FileGenerator\PostgresSqlTransformer;
@@ -58,14 +59,14 @@ $filtersMapper = [
 
 $config = Yaml::parseFile($path->configPath) ?? [];
 $settingsFactory = new SettingsFactory($transformersMapper, $filtersMapper);
-$settings = $settingsFactory->create($config);
+$settingsMerger = new SettingsMerger($config['settings'] ?? []);
 
 $psql = new PostgreSQL($connection);
 $schemaFactory = new SchemaFactory($path, new SchemaMerger());
 $schema = $schemaFactory->create();
-$entrypointFactory = new EntrypointsFactory($path);
+$entrypointFactory = new EntrypointsFactory($path, $settingsMerger, $settingsFactory);
 $entrypoints = $entrypointFactory->create();
-$spider = new Spider($psql, $schema, $settings, 42);
+$spider = new Spider($psql, $schema, 42);
 $result = $spider->start($entrypoints);
 
 $fixtureSaver = new FileSaver($path);

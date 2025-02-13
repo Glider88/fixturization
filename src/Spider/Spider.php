@@ -10,12 +10,12 @@ use Glider88\Fixturization\Database\WhereClause;
 use Glider88\Fixturization\Schema\Schema;
 
 // ToDo: film 2*-> language
+// ToDo: recursion table
 readonly class Spider
 {
     public function __construct(
         private DatabaseInterface $db,
         private Schema            $schema,
-        private Settings          $settings,
         private ?int              $seed = null,
     ) {}
 
@@ -31,14 +31,16 @@ readonly class Spider
         foreach ($entrypoints as $entrypoint) {
             foreach ($entrypoint->roots as $root) {
                 $tableSchema = $this->schema->table($root->tableName);
-                $rows = $this->db->randomRows($root->tableName, $tableSchema->cols, $entrypoint->count);
+                $entrypointSettings = $entrypoint->settings;
+                $entrypointCount = $entrypointSettings->tableSettings($root->tableName)?->count() ?? 1; // ToDo: refactor
+                $rows = $this->db->randomRows($root->tableName, $tableSchema->cols, $entrypointCount);
                 foreach ($rows as $row) {
                     $whereClauses = [];
                     foreach ($tableSchema->pk as $idCol) {
                         $whereClauses[] = WhereClause::new($idCol, '=', $row[$idCol]);
                     }
 
-                    $results[] = $this->result($root, ...$whereClauses);
+                    $results[] = $this->result($root, $entrypointSettings, ...$whereClauses);
                 }
             }
         }
@@ -46,12 +48,12 @@ readonly class Spider
         return Result::mergeAll($results)->result();
     }
 
-    private function result(Node $node, WhereClause ...$whereClauses): Result
+    private function result(Node $node, Settings $settings, WhereClause ...$whereClauses): Result
     {
         $tableName = $node->tableName;
         $tableSchema = $this->schema->table($tableName);
-        $tableSettings = $this->settings->tableSettings($tableName);
-        $tableRows = $this->fetchRow($tableName, ...$whereClauses);
+        $tableSettings = $settings->tableSettings($tableName);
+        $tableRows = $this->fetchRow($tableName, $settings, ...$whereClauses);
 
         if (empty($tableRows)) {
             return Result::newEmpty();
@@ -68,7 +70,7 @@ readonly class Spider
         foreach ($node->children as $child) {
             $link = $this->schema->link($node->tableName, $child->tableName);
             $nextWhereClauses = WhereClause::new($link->linkColumn, '=', $tableRow[$link->ownColumn]);
-            $linkResults[] = $this->result($child, $nextWhereClauses);
+            $linkResults[] = $this->result($child, $settings, $nextWhereClauses);
         }
 
         return Result::mergeAll($linkResults);
@@ -82,10 +84,10 @@ readonly class Spider
         }
     }
 
-    private function fetchRow(string $tableName, WhereClause ...$whereClauses): array
+    private function fetchRow(string $tableName, Settings $settings, WhereClause ...$whereClauses): array
     {
         $tableSchema = $this->schema->table($tableName);
-        $allColumnSettings = $this->settings->tableSettings($tableName)?->all() ?: [];
+        $allColumnSettings = $settings->tableSettings($tableName)?->all() ?: [];
 
         $filterWheres = [];
         foreach ($allColumnSettings as $columnName => $columnSettings) {

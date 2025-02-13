@@ -16,7 +16,7 @@ readonly class SettingsFactory
 
     public function create(array $config): Settings
     {
-        $tables = $config['settings']['tables'] ?? [];
+        $tables = $config['tables'] ?? [];
 
         $settings = [];
         foreach ($tables as $tableName => $tableConfig) {
@@ -39,7 +39,10 @@ readonly class SettingsFactory
                 $columnSettings[$columnName] = new ColumnSettings($tableName, $columnName, $transformers, $filters);
             }
 
-            $settings[$tableName] = new TableSettings($columnSettings);
+            $settings[$tableName] = new TableSettings(
+                $columnSettings,
+                $tableConfig['count'] ?? null,
+            );
         }
 
         return new Settings($settings);

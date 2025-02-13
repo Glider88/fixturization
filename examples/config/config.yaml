@@ -1,25 +1,76 @@
 entrypoints:
+#  -
+#    count: 10
+#    routes:
+#      - [rental, customer, address, city, country]
+#      - [rental, customer, store, address, city, country]
+#      - [rental, inventory, film, film_actor, actor]
+#      - [rental, inventory, film, film_category, category]
+#      - [rental, inventory, film, language]
+#      - [rental, inventory, store, address, city, country]
+#      - [rental, staff, address, city, country]
+#      - [rental, staff, store, address, city, country]
+
+
+
+#  -
+#    route: [country, city, address, customer]
+#    settings:
+#      tables:
+#        country:
+#          count: 3
+#        city:
+#          count: [1, 3]
+#        address:
+#          count: 4
+#        store:
+#          count: 0
+#
+#settings:
+#  tables:
+#    address:
+#      columns:
+#        phone:
+#          transformers:
+#            - column_shuffle
+#    staff:
+#      columns:
+#        username:
+#          filters:
+#            - column_first_s
+
+
   -
-    count: 10
     routes:
-      - [rental, customer, address, city, country]
-      - [rental, customer, store, address, city, country]
-      - [rental, inventory, film, film_actor, actor]
-      - [rental, inventory, film, film_category, category]
-      - [rental, inventory, film, language]
-      - [rental, inventory, store, address, city, country]
-      - [rental, staff, address, city, country]
-      - [rental, staff, store, address, city, country]
+      - [country, city, address, customer]
+    settings:
+      tables:
+        country:
+          count: 3
+        city:
+          count: 1-3
+        address:
+          count: 1-2
+          columns:
+            phone:
+              transformers:
+                - column_shuffle
+        staff:
+          count: 4
 
 settings:
   tables:
     address:
+      count: 3-4
       columns:
         phone:
           transformers:
             - column_shuffle
     staff:
+      count: 9
       columns:
         username:
           filters:
             - column_first_s
+    store:
+      count: 0
