@@ -99,7 +99,7 @@ SQL;
         return $this->connection->fetchAllAssociative($sql);
     }
 
-    public function row(string $table, array $columns, WhereClause ...$whereClauses): array
+    public function row(string $table, array $columns, int $limit, WhereClause ...$whereClauses): array
     {
         $cols = implode(', ', $columns);
         if (empty($cols)) {
@@ -111,7 +111,7 @@ SQL;
             array_map(static fn(WhereClause $w) => "$w->col $w->operator $w->value", $whereClauses)
         );
 
-        $sql = "select $cols from $table where $whereClause";
+        $sql = "select $cols from $table where $whereClause limit $limit";
 
         return $this->connection->fetchAllAssociative($sql);
     }

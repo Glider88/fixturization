@@ -38,6 +38,7 @@ readonly class Spider
                     $whereClauses = [];
                     foreach ($tableSchema->pk as $idCol) {
                         $whereClauses[] = WhereClause::new($idCol, '=', $row[$idCol]);
+//                        $whereClauses[] = WhereClause::new($idCol, '=', 44);
                     }
 
                     $results[] = $this->result($root, $entrypointSettings, ...$whereClauses);
@@ -53,24 +54,28 @@ readonly class Spider
         $tableName = $node->tableName;
         $tableSchema = $this->schema->table($tableName);
         $tableSettings = $settings->tableSettings($tableName);
-        $tableRows = $this->fetchRow($tableName, $settings, ...$whereClauses);
+        $tableRowsRaw = $this->fetchRow($tableName, $settings, ...$whereClauses);
 
-        if (empty($tableRows)) {
+        if (empty($tableRowsRaw)) {
             return Result::newEmpty();
         }
 
-        $tableRowRaw = $tableRows[array_rand($tableRows)];
-        $tableRow = $this->processRow($tableSettings, $tableRowRaw);
-
-        if (empty($node->children)) {
-            return Result::new(Status::Done, $tableSchema, [$tableRow]);
+        $tableRows = [];
+        foreach ($tableRowsRaw as $tableRowRaw) {
+            $tableRows[] = $this->processRow($tableSettings, $tableRowRaw);
         }
 
-        $linkResults = [Result::new(Status::Done, $tableSchema, [$tableRow])];
+        if (empty($node->children)) {
+            return Result::new(Status::Done, $tableSchema, $tableRows);
+        }
+
+        $linkResults = [Result::new(Status::Done, $tableSchema, $tableRows)];
         foreach ($node->children as $child) {
             $link = $this->schema->link($node->tableName, $child->tableName);
-            $nextWhereClauses = WhereClause::new($link->linkColumn, '=', $tableRow[$link->ownColumn]);
-            $linkResults[] = $this->result($child, $settings, $nextWhereClauses);
+            foreach ($tableRows as $tableRow) {
+                $nextWhereClauses = WhereClause::new($link->linkColumn, '=', $tableRow[$link->ownColumn]);
+                $linkResults[] = $this->result($child, $settings, $nextWhereClauses);
+            }
         }
 
         return Result::mergeAll($linkResults);
@@ -97,8 +102,9 @@ readonly class Spider
         }
 
         $allWheres = array_merge($filterWheres, $whereClauses);
+        $count = $settings->tableSettings($tableName)?->count() ?? 1; // ToDo: refactor
 
-        return $this->db->row($tableName, $tableSchema->cols, ...$allWheres);
+        return $this->db->row($tableName, $tableSchema->cols, $count, ...$allWheres);
     }
 
     private function processRow(?TableSettings $tableSettings, array $row): array
