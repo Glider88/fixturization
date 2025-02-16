@@ -6,7 +6,7 @@ readonly class Schema
 {
     /**
      * @param array<string, TableMeta> $tableToMeta
-     * @param array<string, array<string, Link>> $links
+     * @param array<string, array<string, array<Link>>> $links
      */
     public function __construct(
         private array $tableToMeta,
@@ -28,7 +28,8 @@ readonly class Schema
         return $this->tableToMeta;
     }
 
-    public function link(string $tableFrom, string $tableTo): ?Link
+    /** @return array<Link>|null */
+    public function links(string $tableFrom, string $tableTo): ?array
     {
         return $this->links[$tableFrom][$tableTo] ?? null;
     }

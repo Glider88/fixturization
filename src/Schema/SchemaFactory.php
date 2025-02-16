@@ -33,14 +33,14 @@ readonly class SchemaFactory
         foreach ($schema as $tableName => $tableConf) {
             if (array_key_exists('foreign_keys', $tableConf)) {
                 foreach ($tableConf['foreign_keys'] as $fkColumn => $refTable) {
-                    $result[$tableName][$refTable] = new Link(
+                    $result[$tableName][$refTable][] = new Link(
                         LinkType::ManyToOne,
                         $tableName,
                         $fkColumn,
                         $refTable,
                         $schema[$refTable]['pk'],
                     );
-                    $result[$refTable][$tableName] = new Link(
+                    $result[$refTable][$tableName][] = new Link(
                         LinkType::OneToMany,
                         $refTable,
                         $schema[$refTable]['pk'],

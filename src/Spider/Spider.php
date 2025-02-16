@@ -9,8 +9,6 @@ use Glider88\Fixturization\Database\DatabaseInterface;
 use Glider88\Fixturization\Database\WhereClause;
 use Glider88\Fixturization\Schema\Schema;
 
-// ToDo: film 2*-> language
-// ToDo: recursion table
 readonly class Spider
 {
     public function __construct(
@@ -37,8 +35,9 @@ readonly class Spider
                 foreach ($rows as $row) {
                     $whereClauses = [];
                     foreach ($tableSchema->pk as $idCol) {
-                        $whereClauses[] = WhereClause::new($idCol, '=', $row[$idCol]);
-//                        $whereClauses[] = WhereClause::new($idCol, '=', 1);
+//                        $whereClauses[] = WhereClause::new($idCol, '=', $row[$idCol]);
+//                        $whereClauses[] = WhereClause::new($idCol, '=', 625);
+                        $whereClauses[] = WhereClause::new($idCol, '=', 1);
 //                        $whereClauses[] = WhereClause::new($idCol, '=', 44);
                     }
 
@@ -72,10 +71,12 @@ readonly class Spider
 
         $linkResults = [Result::new(Status::Done, $tableSchema, $tableRows)];
         foreach ($node->children as $child) {
-            $link = $this->schema->link($node->tableName, $child->tableName);
+            $links = $this->schema->links($node->tableName, $child->tableName);
             foreach ($tableRows as $tableRow) {
-                $nextWhereClauses = WhereClause::new($link->linkColumn, '=', $tableRow[$link->ownColumn]);
-                $linkResults[] = $this->result($child, $settings, $nextWhereClauses);
+                foreach ($links as $link) {
+                    $nextWhereClauses = WhereClause::new($link->linkColumn, '=', $tableRow[$link->ownColumn]);
+                    $linkResults[] = $this->result($child, $settings, $nextWhereClauses);
+                }
             }
         }
 
