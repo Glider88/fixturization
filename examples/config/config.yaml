@@ -10,7 +10,6 @@
 #      - [rental, inventory, store, address, city, country]
 #      - [rental, staff, address, city, country]
 #      - [rental, staff, store, address, city, country]
-
 #  -
 #    route: [country, city, address, customer]
 #    settings:
@@ -18,7 +17,7 @@
 #        country:
 #          count: 3
 #        city:
-#          count: [1, 3]
+#          count: 1-3
 #        address:
 #          count: 4
 #        store:

@@ -35,9 +35,9 @@ readonly class Spider
                 foreach ($rows as $row) {
                     $whereClauses = [];
                     foreach ($tableSchema->pk as $idCol) {
-//                        $whereClauses[] = WhereClause::new($idCol, '=', $row[$idCol]);
+                        $whereClauses[] = WhereClause::new($idCol, '=', $row[$idCol]);
 //                        $whereClauses[] = WhereClause::new($idCol, '=', 625);
-                        $whereClauses[] = WhereClause::new($idCol, '=', 1);
+//                        $whereClauses[] = WhereClause::new($idCol, '=', 1);
 //                        $whereClauses[] = WhereClause::new($idCol, '=', 44);
                     }
 
