@@ -3,68 +3,46 @@
 namespace Glider88\Fixturization\Config;
 
 use Glider88\Fixturization\Common\Arr;
+use Glider88\Fixturization\Schema\Schema;
+use Glider88\Fixturization\Schema\TableMeta;
 
 readonly class SettingsMerger
 {
+    /** @var array<string> */
+    private array $tables;
+
     public function __construct(
-        private array $allSettings,
-    ) {}
-
-    public function merge(array $entrypointSettings): array
-    {
-        $merged = array_merge_recursive($this->allSettings, $entrypointSettings);
-        $countFixed = $this->fixCount($merged);
-        $fixed = $this->fixDoubled($countFixed);
-
-        return $fixed;
+        private Schema $schema,
+    ) {
+        $this->tables = array_map(static fn(TableMeta $t) => $t->name, $this->schema->allTables());
     }
 
-    private function fixCount(array $settings): array
+    public function merge(array $allSettings, array $entrypointSettings): array
     {
-        function define(string $count): int
-        {
-            $vals = explode('-', $count);
-            if (count($vals) === 1) {
-                return (int) Arr::first($vals);
-            }
+        $base = $allSettings['settings']['tables'] ?? [];
+        $extra = $entrypointSettings['settings']['tables'] ?? [];
 
-            return random_int((int) Arr::first($vals), (int) Arr::last($vals));
+        $result = [];
+        foreach ($this->tables as $table) {
+            $result[$table]['count']        = $extra[$table]['count']        ?? $base[$table]['count']        ?? 1;
+            $result[$table]['columns']      = $extra[$table]['columns']      ?? $base[$table]['columns']      ?? null;
+            $result[$table]['transformers'] = $extra[$table]['transformers'] ?? $base[$table]['transformers'] ?? [];
+            $result[$table]['filter']       = $extra[$table]['filter']       ?? $base[$table]['filter']       ?? null;
+
+            $result[$table]['count'] = $this->define($result[$table]['count']);
         }
 
-        $newSettings = Arr::walk($settings, static function ($key, $value) {
-            if ($key === 'count') {
-                if (is_string($value)) {
-                    return define($value);
-                }
-
-                if (is_array($value)) {
-                    $last = Arr::last($value);
-                    if (is_int($last)) {
-                        return $last;
-                    }
-
-                    if (is_string($last)) {
-                        return define($last);
-                    }
-                }
-            }
-
-            return $value;
-        });
-
-        return $newSettings;
+        return ['settings' => ['tables' => $result]];
     }
 
-    private function fixDoubled(array $settings): array
+    private function define(int|string $count): int
     {
-        $newSettings = Arr::walk($settings, static function ($key, $value) {
-            if ($key === 'filters' || $key === 'transformers') {
-                return array_unique($value);
-            }
+        $count = (string) $count;
+        $vals = explode('-', $count);
+        if (count($vals) === 1) {
+            return (int) Arr::first($vals);
+        }
 
-            return $value;
-        });
-
-        return $newSettings;
+        return random_int((int) Arr::first($vals), (int) Arr::last($vals));
     }
 }

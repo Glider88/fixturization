@@ -2,7 +2,6 @@
 
 namespace Glider88\Fixturization\Config;
 
-
 readonly class Settings
 {
     /** @param array<string, TableSettings> $tableToTableSettings */
@@ -10,14 +9,8 @@ readonly class Settings
         private array $tableToTableSettings,
     ) {}
 
-    public function tableSettings(string $tableName): ?TableSettings
+    public function tableSettings(string $tableName): TableSettings
     {
-        return $this->tableToTableSettings[$tableName] ?? null;
-    }
-
-    /** @return array<string, TableSettings> table name -> TableSettings */
-    public function all(): array
-    {
-        return $this->tableToTableSettings;
+        return $this->tableToTableSettings[$tableName];
     }
 }

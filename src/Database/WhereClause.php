@@ -4,15 +4,18 @@ namespace Glider88\Fixturization\Database;
 
 readonly class WhereClause
 {
-    private function __construct(
-        public string $col,
-        public string $operator,
-        public mixed $value,
+    public function __construct(
+        public string $where,
     ) {}
+
+    public function __toString(): string
+    {
+        return $this->where;
+    }
 
     public static function new(string $column, string $operator, mixed $value): WhereClause
     {
-        $fn = static function(string $col, string $op, $val): array
+        $fixValueFn = static function(string $op, mixed $val): array
         {
             if (is_string($val)) {
                 $val = "'$val'";
@@ -23,18 +26,19 @@ readonly class WhereClause
             }
 
             if (is_null($val)) {
-                return [$col, 'is', 'null'];
+                $op = 'is';
+                $val = 'null';
             }
 
-            if (str_contains(strtolower($op), 'in')) {
-                $val = '(' . implode(',', (array) $val) . ')';
-            }
-
-            return [$col, $op, $val];
+            return [$op, $val];
         };
 
-        [$col, $op, $val] = $fn($column, $operator, $value);
+        [$operator, $value] = $fixValueFn($operator, $value);
+        if (is_array($value)) {
+            $operator = 'in';
+            $value = '(' . implode(',', array_map($fixValueFn(...), $value)) . ')';
+        }
 
-        return new WhereClause($col, $op, $val);
+        return new WhereClause("$column $operator $value");
     }
 }

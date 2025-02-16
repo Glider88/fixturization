@@ -106,11 +106,7 @@ SQL;
             $cols = '*';
         }
 
-        $whereClause = implode(
-            ' AND ',
-            array_map(static fn(WhereClause $w) => "$w->col $w->operator $w->value", $whereClauses)
-        );
-
+        $whereClause = implode(' AND ', $whereClauses);
         $sql = "select $cols from $table where $whereClause limit $limit";
 
         return $this->connection->fetchAllAssociative($sql);

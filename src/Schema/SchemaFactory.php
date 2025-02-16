@@ -2,19 +2,17 @@
 
 namespace Glider88\Fixturization\Schema;
 
-use Glider88\Fixturization\Config\Path;
-use Symfony\Component\Yaml\Yaml;
-
 readonly class SchemaFactory
 {
     public function __construct(
-        private Path $path,
+        private array $schemaDb,
+        private array $schemaManual,
         private SchemaMergerInterface $merger,
     ) {}
 
     public function create(): Schema
     {
-        $schema = $this->schema();
+        $schema = $this->merger->merge($this->schemaDb, $this->schemaManual);
         $links = $this->links($schema);
 
         $tables = [];
@@ -27,15 +25,6 @@ readonly class SchemaFactory
         }
 
         return new Schema($tables, $links);
-    }
-
-    private function schema(): array
-    {
-        $fn = static fn(?string $path) => $path === null ? [] : (Yaml::parseFile($path) ?? []);
-        $schemaDb = $fn($this->path->schemaDbPath);
-        $schemaManual = $fn($this->path->schemaManualPath);
-
-        return $this->merger->merge($schemaDb, $schemaManual);
     }
 
     private function links(array $schema): array

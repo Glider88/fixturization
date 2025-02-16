@@ -2,27 +2,25 @@
 
 namespace Glider88\Fixturization\Config;
 
+use Glider88\Fixturization\Database\WhereClause;
+use Glider88\Fixturization\Transformer\TransformerInterface;
+
 readonly class TableSettings
 {
-    /** @param array<string, ColumnSettings> $columnToColumnSettings */
+    /**
+     * @param array<string, array<TransformerInterface>> $transformers
+     * @param array<string> $columns
+     */
     public function __construct(
-        private array $columnToColumnSettings,
-        private ?int $count,
+        public int $count,
+        public array $columns,
+        public ?WhereClause $whereClause,
+        private array $transformers,
     ) {}
 
-    public function count(): int
+    /** @return array<TransformerInterface> */
+    public function transformers(string $column): array
     {
-        return $this->count ?: 1;
-    }
-
-    public function columnSettings(string $columnName): ?ColumnSettings
-    {
-        return $this->columnToColumnSettings[$columnName] ?? null;
-    }
-
-    /** @return array<string, ColumnSettings> column name -> ColumnSettings */
-    public function all(): array
-    {
-        return $this->columnToColumnSettings;
+        return $this->transformers[$column] ?? [];
     }
 }

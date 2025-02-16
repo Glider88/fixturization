@@ -47,19 +47,25 @@ entrypoints:
       tables:
         country:
           count: 1
+          columns: [ country_id, country ]
+          transformers:
+            country: [ column_shuffle ]
+          filter: "country like 'A%'"
         city:
-          count: 5
+          count: 3
         address:
           count: 1
         customer:
           count: 0
 
+
 settings:
   tables:
     address:
       count: 10
-      columns:
-        phone:
-          transformers:
-            - column_shuffle
-
+    country:
+      count: 0
+      columns: [ ayaya ]
+      transformers:
+        country: [ ayaya ]
+      filter: 'ayaya'

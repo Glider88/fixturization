@@ -4,12 +4,11 @@ namespace Glider88\Fixturization\Config;
 
 use Glider88\Fixturization\Common\Arr;
 use Glider88\Fixturization\Spider\Node;
-use Symfony\Component\Yaml\Yaml;
 
 readonly class EntrypointsFactory
 {
     public function __construct(
-        private Path $path,
+        private array $config,
         private SettingsMerger $merger,
         private SettingsFactory $settingsFactory,
     ) {}
@@ -17,15 +16,13 @@ readonly class EntrypointsFactory
     /** @return array<Entrypoint> */
     public function create(): array
     {
-        $config = Yaml::parseFile($this->path->configPath) ?? [];
-        $entrypointConfig = $config['entrypoints'] ?? [];
+        $entrypointConfig = $this->config['entrypoints'] ?? [];
 
         $entrypoints = [];
-        foreach ($entrypointConfig as $e) {
-            $settingsConfig = $e['settings'] ?? [];
-            $merged = $this->merger->merge($settingsConfig);
+        foreach ($entrypointConfig as $entry) {
+            $merged = $this->merger->merge($this->config, $entry);
             $settings = $this->settingsFactory->create($merged);
-            $entrypoints[] = new Entrypoint($this->node($e['routes']), $settings);
+            $entrypoints[] = new Entrypoint($this->node($entry['routes']), $settings);
         }
 
         return $entrypoints;

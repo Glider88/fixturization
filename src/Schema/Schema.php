@@ -22,6 +22,12 @@ readonly class Schema
         return $this->tableToMeta[$tableName];
     }
 
+    /** @return array<TableMeta> */
+    public function allTables(): array
+    {
+        return $this->tableToMeta;
+    }
+
     public function link(string $tableFrom, string $tableTo): ?Link
     {
         return $this->links[$tableFrom][$tableTo] ?? null;

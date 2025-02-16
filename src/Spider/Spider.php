@@ -32,12 +32,13 @@ readonly class Spider
             foreach ($entrypoint->roots as $root) {
                 $tableSchema = $this->schema->table($root->tableName);
                 $entrypointSettings = $entrypoint->settings;
-                $entrypointCount = $entrypointSettings->tableSettings($root->tableName)?->count() ?? 1; // ToDo: refactor
+                $entrypointCount = $entrypointSettings->tableSettings($root->tableName)->count;
                 $rows = $this->db->randomRows($root->tableName, $tableSchema->cols, $entrypointCount);
                 foreach ($rows as $row) {
                     $whereClauses = [];
                     foreach ($tableSchema->pk as $idCol) {
                         $whereClauses[] = WhereClause::new($idCol, '=', $row[$idCol]);
+//                        $whereClauses[] = WhereClause::new($idCol, '=', 1);
 //                        $whereClauses[] = WhereClause::new($idCol, '=', 44);
                     }
 
@@ -91,39 +92,23 @@ readonly class Spider
 
     private function fetchRow(string $tableName, Settings $settings, WhereClause ...$whereClauses): array
     {
-        $tableSchema = $this->schema->table($tableName);
-        $allColumnSettings = $settings->tableSettings($tableName)?->all() ?: [];
-
-        $filterWheres = [];
-        foreach ($allColumnSettings as $columnName => $columnSettings) {
-            foreach ($columnSettings->filters as $filter) {
-                $filterWheres[] = $filter->filter($columnName);
-            }
+        $tableSettings = $settings->tableSettings($tableName);
+        if ($tableSettings->whereClause !== null) {
+            $whereClauses[] = $tableSettings->whereClause;
         }
 
-        $allWheres = array_merge($filterWheres, $whereClauses);
-        $count = $settings->tableSettings($tableName)?->count() ?? 1; // ToDo: refactor
-
-        return $this->db->row($tableName, $tableSchema->cols, $count, ...$allWheres);
+        return $this->db->row($tableName, $tableSettings->columns, $tableSettings->count, ...$whereClauses);
     }
 
-    private function processRow(?TableSettings $tableSettings, array $row): array
+    private function processRow(TableSettings $tableSettings, array $row): array
     {
-        $newRow = [];
         foreach ($row as $column => $value) {
-            $transformers = $tableSettings?->columnSettings($column)?->transformers;
-            if ($transformers === null) {
-                $newRow[$column] = $value;
-                continue;
-            }
-
-            $newValue = $value;
+            $transformers = $tableSettings->transformers($column);
             foreach ($transformers as $transformer) {
-                $newValue = $transformer->transform($newValue);
+                $row[$column] = $transformer->transform($row[$column]);
             }
-            $newRow[$column] = $newValue;
         }
 
-        return $newRow;
+        return $row;
     }
 }

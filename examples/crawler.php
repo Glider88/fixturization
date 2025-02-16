@@ -9,7 +9,6 @@ use Glider88\Fixturization\Config\SettingsMerger;
 use Glider88\Fixturization\Database\PostgreSQL;
 use Glider88\Fixturization\FileGenerator\FileSaver;
 use Glider88\Fixturization\FileGenerator\PostgresSqlTransformer;
-use Glider88\Fixturization\Filter\ColumnFilter;
 use Glider88\Fixturization\Schema\SchemaFactory;
 use Glider88\Fixturization\Schema\SchemaMerger;
 use Glider88\Fixturization\Spider\Spider;
@@ -48,24 +47,25 @@ $connection = DriverManager::getConnection([
     'driver'   => 'pdo_pgsql',
     'charset'  => 'utf8',
 ]);
+$psql = new PostgreSQL($connection);
+
+$parseFn = static fn(?string $p) => $p === null ? [] : (Yaml::parseFile($p) ?? []);
+$schemaFactory = new SchemaFactory(
+    $parseFn($path->schemaDbPath),
+    $parseFn($path->schemaManualPath),
+    new SchemaMerger(),
+);
+$schema = $schemaFactory->create();
 
 $transformersMapper = [
     'column_shuffle' => new ColumnShuffle(),
 ];
-
-$filtersMapper = [
-    'column_first_s' => new ColumnFilter('like', 's%'),
-];
-
+$settingsFactory = new SettingsFactory($schema, $transformersMapper);
+$settingsMerger = new SettingsMerger($schema);
 $config = Yaml::parseFile($path->configPath) ?? [];
-$settingsFactory = new SettingsFactory($transformersMapper, $filtersMapper);
-$settingsMerger = new SettingsMerger($config['settings'] ?? []);
-
-$psql = new PostgreSQL($connection);
-$schemaFactory = new SchemaFactory($path, new SchemaMerger());
-$schema = $schemaFactory->create();
-$entrypointFactory = new EntrypointsFactory($path, $settingsMerger, $settingsFactory);
+$entrypointFactory = new EntrypointsFactory($config, $settingsMerger, $settingsFactory);
 $entrypoints = $entrypointFactory->create();
+
 $spider = new Spider($psql, $schema, 42);
 $result = $spider->start($entrypoints);
 
