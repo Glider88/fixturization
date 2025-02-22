@@ -2,17 +2,19 @@
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-use Glider88\Fixturization\Config\SettingsFactory;
+use Doctrine\DBAL\DriverManager;
 use Glider88\Fixturization\Config\EntrypointsFactory;
 use Glider88\Fixturization\Config\Path;
+use Glider88\Fixturization\Config\SettingsFactory;
 use Glider88\Fixturization\Config\SettingsMerger;
+use Glider88\Fixturization\Database\DatabaseCached;
+use Glider88\Fixturization\Database\Cache;
 use Glider88\Fixturization\Database\PostgreSQL;
 use Glider88\Fixturization\FileGenerator\FileSaver;
 use Glider88\Fixturization\FileGenerator\PostgresSqlTransformer;
 use Glider88\Fixturization\Schema\SchemaFactory;
 use Glider88\Fixturization\Schema\SchemaMerger;
 use Glider88\Fixturization\Spider\Spider;
-use Doctrine\DBAL\DriverManager;
 use Glider88\Fixturization\Transformer\ColumnShuffle;
 use Symfony\Component\Yaml\Yaml;
 
@@ -66,7 +68,10 @@ $config = Yaml::parseFile($path->configPath) ?? [];
 $entrypointFactory = new EntrypointsFactory($config, $settingsMerger, $settingsFactory);
 $entrypoints = $entrypointFactory->create();
 
-$spider = new Spider($psql, $schema, 42);
+$cache = new Cache($connection, $schema, );
+$dbCached = new DatabaseCached($psql, $cache);
+
+$spider = new Spider($psql, $dbCached, $schema, 42);
 $result = $spider->start($entrypoints);
 
 $fixtureSaver = new FileSaver($path);

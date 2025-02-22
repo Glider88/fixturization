@@ -22,17 +22,19 @@ readonly class SettingsMerger
         $base = $allSettings['settings']['tables'] ?? [];
         $extra = $entrypointSettings['settings']['tables'] ?? [];
 
-        $result = [];
+        $tables = [];
         foreach ($this->tables as $table) {
-            $result[$table]['count']        = $extra[$table]['count']        ?? $base[$table]['count']        ?? 1;
-            $result[$table]['columns']      = $extra[$table]['columns']      ?? $base[$table]['columns']      ?? null;
-            $result[$table]['transformers'] = $extra[$table]['transformers'] ?? $base[$table]['transformers'] ?? [];
-            $result[$table]['filter']       = $extra[$table]['filter']       ?? $base[$table]['filter']       ?? null;
+            $tables[$table]['count']        = $extra[$table]['count']        ?? $base[$table]['count']        ?? 1;
+            $tables[$table]['columns']      = $extra[$table]['columns']      ?? $base[$table]['columns']      ?? null;
+            $tables[$table]['transformers'] = $extra[$table]['transformers'] ?? $base[$table]['transformers'] ?? [];
+            $tables[$table]['filter']       = $extra[$table]['filter']       ?? $base[$table]['filter']       ?? null;
 
-            $result[$table]['count'] = $this->define($result[$table]['count']);
+            $tables[$table]['count'] = $this->define($tables[$table]['count']);
         }
 
-        return ['settings' => ['tables' => $result]];
+        $joins = $allSettings['settings']['joins'] ?? $entrypointSettings['settings']['joins'] ?? [];
+
+        return ['settings' => ['tables' => $tables, 'joins' => $joins]];
     }
 
     private function define(int|string $count): int

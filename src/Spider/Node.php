@@ -6,6 +6,7 @@ readonly class Node {
     /** @param array<Node> $children */
     public function __construct(
         public string $tableName,
+        public ?int $joinIndex = null,
         public array $children = [],
     ) {}
 }

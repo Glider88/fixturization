@@ -4,12 +4,13 @@ namespace Glider88\Fixturization\Database;
 
 use Doctrine\DBAL\Connection;
 
-readonly class PostgreSQL implements DatabaseInterface
+readonly class PostgreSQL implements DatabaseInterface, DatabaseMetaInterface, DatabaseRowInterface
 {
     public function __construct(
         private Connection $connection
     ) {}
 
+    /** @inheritDoc */
     public function tables(): array
     {
         $sql = <<<SQL
@@ -28,6 +29,7 @@ SQL;
         );
     }
 
+    /** @inheritDoc */
     public function columns(string $table): array
     {
         $sql = <<<SQL
@@ -42,6 +44,7 @@ SQL;
         );
     }
 
+    /** @inheritDoc */
     public function foreignKeys(string $table): array
     {
         $sql = <<<SQL
@@ -61,6 +64,7 @@ SQL;
         return $this->connection->fetchAllAssociative($sql);
     }
 
+    /** @inheritDoc */
     public function primaryKeys(string $table): array
     {
         $sql = <<<SQL
@@ -85,29 +89,40 @@ SQL;
         return $pk;
     }
 
-    public function randomRows(string $table, array $columns, ?int $count): array
+//    public function randomRows(string $table, array $columns, ?int $count): array
+//    {
+//        $cols = implode(', ', $columns);
+//        if (empty($cols)) {
+//            $cols = '*';
+//        }
+//
+//        $limitClause = $count === null ? '' : "limit $count";
+//
+//        $sql = "select $cols from $table order by random() $limitClause";
+//
+//        return $this->connection->fetchAllAssociative($sql);
+//    }
+
+    // ToDo: refactor with sql(...):string?
+    /** @inheritDoc */
+    public function rows(string $table, array $columns, int $limit, array $whereClauses, bool $random): array
     {
         $cols = implode(', ', $columns);
         if (empty($cols)) {
             $cols = '*';
         }
 
-        $limitClause = $count === null ? '' : "limit $count";
-
-        $sql = "select $cols from $table order by random() $limitClause";
-
-        return $this->connection->fetchAllAssociative($sql);
-    }
-
-    public function row(string $table, array $columns, int $limit, WhereClause ...$whereClauses): array
-    {
-        $cols = implode(', ', $columns);
-        if (empty($cols)) {
-            $cols = '*';
+        $order = '';
+        if ($random) {
+            $order = 'order by random()';
         }
 
-        $whereClause = implode(' AND ', $whereClauses);
-        $sql = "select $cols from $table where $whereClause limit $limit";
+        $whereClause = '';
+        if (!empty($whereClauses)) {
+            $whereClause = 'where ' . implode(' AND ', $whereClauses);
+        }
+
+        $sql = "select $cols from $table $whereClause $order limit $limit";
 
         return $this->connection->fetchAllAssociative($sql);
     }

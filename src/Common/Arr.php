@@ -63,4 +63,25 @@ readonly class Arr
 
         return $b;
     }
+
+    /**
+     * @template K
+     * @template T
+     * @param array<K,T> $array
+     * @return array<array<K,T>>
+     */
+    public static function slidingWindow(array $array, int $size, bool $preserveKeys = false, int $step = 1): array
+    {
+        $result = [];
+        $length = count($array);
+        foreach (range(0, $length, $step) as $offset) {
+            $window = array_slice($array, $offset, $size, $preserveKeys);
+            $result[] = $window;
+            if ($offset + $size >= $length) {
+                break;
+            }
+        }
+
+        return $result;
+    }
 }

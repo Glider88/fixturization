@@ -2,7 +2,7 @@
 
 namespace Glider88\Fixturization\Config;
 
-use Glider88\Fixturization\Database\WhereClause;
+use Glider88\Fixturization\Database\WhereFilterClause;
 use Glider88\Fixturization\Transformer\TransformerInterface;
 
 readonly class TableSettings
@@ -12,10 +12,10 @@ readonly class TableSettings
      * @param array<string> $columns
      */
     public function __construct(
-        public int $count,
-        public array $columns,
-        public ?WhereClause $whereClause,
-        private array $transformers,
+        public int                $count,
+        public array              $columns,
+        public ?WhereFilterClause $whereFilter,
+        private array             $transformers,
     ) {}
 
     /** @return array<TransformerInterface> */

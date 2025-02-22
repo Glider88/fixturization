@@ -28,6 +28,7 @@ readonly class Schema
         return $this->tableToMeta;
     }
 
+    // ToDo: null or []?
     /** @return array<Link>|null */
     public function links(string $tableFrom, string $tableTo): ?array
     {

@@ -7,19 +7,17 @@ use Glider88\Fixturization\Schema\TableMeta;
 class Result
 {
     private function __construct(
-        public Status $status,
         /** @var array<string, array<int|string, array>> */
         public array $tableToRowIdToRow,
-//        public int $jump,
     ) {}
 
     public static function newEmpty(): Result
     {
-        return new Result(Status::Done, []);
+        return new Result([]);
     }
 
     /** @param array<array> $rows */
-    public static function new(Status $status, TableMeta $schema, array $rows): Result
+    public static function new(TableMeta $schema, array $rows): Result
     {
         $result = [];
         foreach ($rows as $row) {
@@ -31,7 +29,7 @@ class Result
             $result[$schema->name][$id] = $row;
         }
 
-        return new Result($status, $result);
+        return new Result($result);
     }
 
     /** @param array<Result> $results */
@@ -51,14 +49,6 @@ class Result
 
     public function merge(Result $result): void
     {
-//        $this->jump = max($this->jump, $result->jump);
-
-        if ($this->status === Status::Fail || $result->status === Status::Fail) {
-            $this->status = Status::Fail;
-        } else {
-            $this->status = Status::Done;
-        }
-
         foreach ($result->result() as $tableName => $rows) {
             foreach ($rows as $id => $row) {
                 $this->tableToRowIdToRow[$tableName][$id] = $row;

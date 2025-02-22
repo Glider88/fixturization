@@ -2,7 +2,7 @@
 
 namespace Glider88\Fixturization\Config;
 
-use Glider88\Fixturization\Database\WhereClause;
+use Glider88\Fixturization\Database\WhereFilterClause;
 use Glider88\Fixturization\Schema\Schema;
 use Glider88\Fixturization\Transformer\TransformerInterface;
 
@@ -22,7 +22,7 @@ readonly class SettingsFactory
 
             $whereClause = null;
             if (!empty($tableConfig['filter'])) {
-                $whereClause = new WhereClause($tableConfig['filter']);
+                $whereClause = new WhereFilterClause($tableConfig['filter']);
             }
 
             $transformers = [];
@@ -37,6 +37,6 @@ readonly class SettingsFactory
             $settings[$tableName] = new TableSettings($tableConfig['count'], $cols, $whereClause, $transformers);
         }
 
-        return new Settings($settings);
+        return new Settings($settings, $config['settings']['joins']);
     }
 }

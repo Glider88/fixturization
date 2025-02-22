@@ -5,14 +5,16 @@ namespace Glider88\Fixturization\Spider;
 use Glider88\Fixturization\Config\Entrypoint;
 use Glider88\Fixturization\Config\Settings;
 use Glider88\Fixturization\Config\TableSettings;
+use Glider88\Fixturization\Database\DatabaseCached;
 use Glider88\Fixturization\Database\DatabaseInterface;
-use Glider88\Fixturization\Database\WhereClause;
+use Glider88\Fixturization\Database\WhereLinkClause;
 use Glider88\Fixturization\Schema\Schema;
 
 readonly class Spider
 {
     public function __construct(
         private DatabaseInterface $db,
+        private DatabaseCached    $cache,
         private Schema            $schema,
         private ?int              $seed = null,
     ) {}
@@ -29,19 +31,14 @@ readonly class Spider
         foreach ($entrypoints as $entrypoint) {
             foreach ($entrypoint->roots as $root) {
                 $tableSchema = $this->schema->table($root->tableName);
-                $entrypointSettings = $entrypoint->settings;
-                $entrypointCount = $entrypointSettings->tableSettings($root->tableName)->count;
-                $rows = $this->db->randomRows($root->tableName, $tableSchema->cols, $entrypointCount);
+                $rows = $this->fetchRows($root->tableName, $root, $entrypoint->settings, true, []);
                 foreach ($rows as $row) {
                     $whereClauses = [];
                     foreach ($tableSchema->pk as $idCol) {
-                        $whereClauses[] = WhereClause::new($idCol, '=', $row[$idCol]);
-//                        $whereClauses[] = WhereClause::new($idCol, '=', 625);
-//                        $whereClauses[] = WhereClause::new($idCol, '=', 1);
-//                        $whereClauses[] = WhereClause::new($idCol, '=', 44);
+                        $whereClauses[] = new WhereLinkClause($idCol, $row[$idCol]);
                     }
 
-                    $results[] = $this->result($root, $entrypointSettings, ...$whereClauses);
+                    $results[] = $this->result($root, $entrypoint->settings, $whereClauses);
                 }
             }
         }
@@ -49,12 +46,13 @@ readonly class Spider
         return Result::mergeAll($results)->result();
     }
 
-    private function result(Node $node, Settings $settings, WhereClause ...$whereClauses): Result
+    /** @param array<WhereLinkClause> $whereClauses */
+    private function result(Node $node, Settings $settings, array $whereClauses): Result
     {
         $tableName = $node->tableName;
         $tableSchema = $this->schema->table($tableName);
         $tableSettings = $settings->tableSettings($tableName);
-        $tableRowsRaw = $this->fetchRow($tableName, $settings, ...$whereClauses);
+        $tableRowsRaw = $this->fetchRows($tableName, $node, $settings, false, $whereClauses);
 
         if (empty($tableRowsRaw)) {
             return Result::newEmpty();
@@ -66,16 +64,16 @@ readonly class Spider
         }
 
         if (empty($node->children)) {
-            return Result::new(Status::Done, $tableSchema, $tableRows);
+            return Result::new($tableSchema, $tableRows);
         }
 
-        $linkResults = [Result::new(Status::Done, $tableSchema, $tableRows)];
+        $linkResults = [Result::new($tableSchema, $tableRows)];
         foreach ($node->children as $child) {
             $links = $this->schema->links($node->tableName, $child->tableName);
             foreach ($tableRows as $tableRow) {
                 foreach ($links as $link) {
-                    $nextWhereClauses = WhereClause::new($link->linkColumn, '=', $tableRow[$link->ownColumn]);
-                    $linkResults[] = $this->result($child, $settings, $nextWhereClauses);
+                    $nextWhereClauses = new WhereLinkClause($link->linkColumn, $tableRow[$link->ownColumn]);
+                    $linkResults[] = $this->result($child, $settings, [$nextWhereClauses]);
                 }
             }
         }
@@ -91,16 +89,29 @@ readonly class Spider
         }
     }
 
-    private function fetchRow(string $tableName, Settings $settings, WhereClause ...$whereClauses): array
+    // ToDo: fetchRow, processRow to class?
+    /**
+     * @param array<WhereLinkClause> $whereClauses
+     * @return array<array<string, mixed>>
+     */
+    private function fetchRows(string $tableName, Node $node, Settings $settings, bool $random, array $whereClauses): array
     {
-        $tableSettings = $settings->tableSettings($tableName);
-        if ($tableSettings->whereClause !== null) {
-            $whereClauses[] = $tableSettings->whereClause;
+        if ($node->joinIndex !== null) {
+            $this->cache->fetchCache($node->joinIndex, $settings, $random, $whereClauses);
         }
 
-        return $this->db->row($tableName, $tableSettings->columns, $tableSettings->count, ...$whereClauses);
+        $tableSettings = $settings->tableSettings($tableName);
+        if ($tableSettings->whereFilter !== null) {
+            $whereClauses[] = $tableSettings->whereFilter;
+        }
+
+        return $this->cache->rows($tableName, $tableSettings->columns, $tableSettings->count, $whereClauses, $random);
     }
 
+    /**
+     * @param array<string, mixed> $row
+     * @return array<string, mixed>
+     */
     private function processRow(TableSettings $tableSettings, array $row): array
     {
         foreach ($row as $column => $value) {

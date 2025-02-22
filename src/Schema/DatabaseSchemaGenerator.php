@@ -2,12 +2,12 @@
 
 namespace Glider88\Fixturization\Schema;
 
-use Glider88\Fixturization\Database\DatabaseInterface;
+use Glider88\Fixturization\Database\DatabaseMetaInterface;
 
 readonly class DatabaseSchemaGenerator implements SchemaGeneratorInterface
 {
     public function __construct(
-        private DatabaseInterface $database,
+        private DatabaseMetaInterface $database,
     ) {}
 
     public function generate(): array

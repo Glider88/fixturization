@@ -2,11 +2,11 @@
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
+use Doctrine\DBAL\DriverManager;
 use Glider88\Fixturization\Config\Path;
 use Glider88\Fixturization\Database\PostgreSQL;
 use Glider88\Fixturization\FileGenerator\FileSaver;
 use Glider88\Fixturization\Schema\DatabaseSchemaGenerator;
-use Doctrine\DBAL\DriverManager;
 
 const PSQL_SOURCE = 'psql';
 const SOURCES = [PSQL_SOURCE];

@@ -22,10 +22,36 @@ readonly class EntrypointsFactory
         foreach ($entrypointConfig as $entry) {
             $merged = $this->merger->merge($this->config, $entry);
             $settings = $this->settingsFactory->create($merged);
-            $entrypoints[] = new Entrypoint($this->node($entry['routes']), $settings);
+            $routes = $this->enrichWithJoins($entry['routes'], $settings->joins);
+            $entrypoints[] = new Entrypoint($this->node($routes), $settings);
         }
 
         return $entrypoints;
+    }
+
+    /**
+     * @param array<array<string>> $routes
+     * @param array<array<string>> $joins
+     * @return array<array<string>>
+     */
+    private function enrichWithJoins(array $routes, array $joins): array
+    {
+        foreach ($routes as &$route) {
+            foreach ($joins as $k => $join) {
+                $length = count($join);
+                $windows = Arr::slidingWindow($route, $length);
+                foreach ($windows as $i => $window) {
+                    if ($window === $join) {
+                        $startJoin = array_shift($join);
+                        $startJoin = "=$k=$startJoin";
+                        array_unshift($join, $startJoin);
+                        array_splice($route, $i, $length, $join);
+                    }
+                }
+            }
+        }
+
+        return $routes;
     }
 
     /**
@@ -35,17 +61,25 @@ readonly class EntrypointsFactory
     private function node(array $routes): array
     {
         $headToRoutes = [];
+        $headToJoinIndex = [];
         foreach ($routes as $route) {
             if (empty($route)) {
                 continue;
             }
 
-            $headToRoutes[Arr::head($route)][] = Arr::tail($route);
+            $head = Arr::head($route);
+            if (preg_match('/^=(\d+)=(.*)$/', $head, $matches)) {
+                $head = $matches[2];
+                $headToJoinIndex[$head] = (int) $matches[1];
+            }
+
+            $headToRoutes[$head][] = Arr::tail($route);
         }
 
         $result = [];
         foreach ($headToRoutes as $head => $tail) {
-            $result[] = new Node($head, $this->node($tail));
+            $joinIndex = $headToJoinIndex[$head] ?? null;
+            $result[] = new Node($head, $joinIndex, $this->node($tail));
         }
 
         return $result;
