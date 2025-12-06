@@ -2,67 +2,72 @@
 
 namespace Glider88\Fixturization\Database;
 
-use Glider88\Fixturization\Config\Settings;
+use Glider88\Fixturization\Database\Query\Query;
+use Glider88\Fixturization\Database\Query\WhereLinkClause;
+use Glider88\Fixturization\Spider\Node;
+use Glider88\Fixturization\Spider\Result;
 
-class DatabaseCached implements DatabaseRowInterface
+class DatabaseCached implements DatabaseRowInterface, CacheInterface
 {
     /** @var array<string, array<int|string, array<string, mixed>>> */
-    private array $tableToIdToRow = [];
+    private array $aliasToIdToRow = [];
 
     public function __construct(
-        readonly private DatabaseRowInterface $db,
-        readonly Cache                        $cache,
+        readonly private DatabaseRowInterface | DatabaseEntrypointInterface $db,
     ) {}
 
-    /** @param array<WhereLinkClause> $whereClauses */
-    public function fetchCache(int $joinIndex, Settings $settings, bool $random, array $whereClauses): void
+    /**
+     * @param list<WhereLinkClause> $entrypointWheres
+     * @param array<string, Node> $aliasToNode
+     */
+    public function fillCache(Query $query, array $entrypointWheres, array $aliasToNode): void
     {
-        $tableToIdToRow = $this->cache->fetch($joinIndex, $settings, $random, $whereClauses);
-        foreach ($tableToIdToRow as $table => $idToRow) {
-            foreach ($idToRow as $id => $row) {
-                $this->tableToIdToRow[$table][$id] = $row;
+        $rawRows = $this->db->entrypointCache($query, $entrypointWheres);
+        foreach ($rawRows as $alias => $rows) {
+            foreach ($rows as $row) {
+                $pks = $aliasToNode[$alias]->schema->pks;
+                $ids = [];
+                foreach ($pks as $pk) {
+                    $ids[] = $row[$pk];
+                }
+
+                $ids = implode(Result::MULTI_PK_SEPARATOR, $ids);
+                $this->aliasToIdToRow[$alias][$ids] = $row;
             }
         }
     }
 
     /** @inheritDoc */
-    public function rows(string $table, array $columns, int $limit, array $whereClauses, bool $random): array
+    public function rows(Node $node, array $whereClauses): array
     {
-        $cache = $this->fromCache($table, $columns, $limit, $whereClauses);
-        if (empty($cache)) {
-            return $this->db->rows($table, $columns, $limit, $whereClauses, $random);
+        $cache = $this->fetchFromCache($node, $whereClauses);
+        if ($cache) {
+            return $cache;
         }
 
-        return $cache;
+        return $this->db->rows($node, $whereClauses);
     }
 
     /**
-     * @param array<string> $columns
-     * @param array<WhereClauseInterface> $whereClauses
+     * @param list<WhereLinkClause> $whereClauses
      * @return array<array<string, mixed>>
      */
-    private function fromCache(string $table, array $columns, int $limit, array $whereClauses): array
+    private function fetchFromCache(Node $node, array $whereClauses): array
     {
-        /** @var array<WhereLinkClause> $wheres */
-        $wheres = array_filter($whereClauses, static fn(WhereClauseInterface $w) => $w instanceof WhereLinkClause);
-
-        $rows = $this->tableToIdToRow[$table] ?? [];
+        $rows = $this->aliasToIdToRow[$node->alias] ?? [];
 
         $filterFn =
             static fn(WhereLinkClause $where) =>
                 static fn(array $row) =>
                     array_key_exists($where->column, $row) && $row[$where->column] === $where->value;
 
-        foreach ($wheres as $where) {
+        foreach ($whereClauses as $where) {
             $rows = array_filter($rows, $filterFn($where));
         }
 
-        $columnAsKeys = array_flip($columns);
-        $result = [];
-        foreach ($rows as $id => $colToVal) {
-            $result[$id] = array_intersect_key($colToVal, $columnAsKeys);
-        }
+        $columnAsKeys = array_flip($node->settings->columns);
+        $result = array_map(static fn(array $r) => array_intersect_key($r, $columnAsKeys), $rows);
 
-        return array_slice($result, 0, $limit);
+        return array_slice($result, 0, $node->settings->count);
     }
 }

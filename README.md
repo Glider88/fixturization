@@ -21,7 +21,13 @@ Fix owner:
 sed -i -e 's/OWNER TO postgres/OWNER TO fixturization/g' .docker/postgres/pagila-schema.sql
 ```
 
-Start docker: 
+Start docker:
+
+First time:
+```shell
+bin/reup
+```
+Next times:
 ```shell
 bin/up
 ```

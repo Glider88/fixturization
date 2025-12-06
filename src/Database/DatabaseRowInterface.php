@@ -2,12 +2,14 @@
 
 namespace Glider88\Fixturization\Database;
 
+use Glider88\Fixturization\Database\Query\WhereLinkClause;
+use Glider88\Fixturization\Spider\Node;
+
 interface DatabaseRowInterface
 {
     /**
-     * @param array<string> $columns
-     * @param array<WhereClauseInterface> $whereClauses
-     * @return array<array<string, mixed>>
+     * @param list<WhereLinkClause> $whereClauses
+     * @return list<array<string, mixed>>
      */
-    public function rows(string $table, array $columns, int $limit, array $whereClauses, bool $random): array;
+    public function rows(Node $node, array $whereClauses): array;
 }

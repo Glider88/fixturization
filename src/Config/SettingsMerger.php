@@ -2,49 +2,85 @@
 
 namespace Glider88\Fixturization\Config;
 
-use Glider88\Fixturization\Common\Arr;
-use Glider88\Fixturization\Schema\Schema;
-use Glider88\Fixturization\Schema\TableMeta;
-
 readonly class SettingsMerger
 {
-    /** @var array<string> */
-    private array $tables;
-
+    /** @param list<string> $tables */
     public function __construct(
-        private Schema $schema,
-    ) {
-        $this->tables = array_map(static fn(TableMeta $t) => $t->name, $this->schema->allTables());
+        private array $tables,
+    ) {}
+
+    public function enrichSettings(array $config): array
+    {
+        $base = $config['base_settings'] ?? [];
+        $entrypoints = $config['entrypoints'] ?? [];
+
+        $result = [];
+        foreach ($entrypoints as $entry) {
+            $result[] = $this->mergeEntrypointWithBase($base, $entry);
+        }
+
+        return $result;
     }
 
-    public function merge(array $allSettings, array $entrypointSettings): array
+    private function mergeEntrypointWithBase(array $base, array $entrypoint): array
     {
-        $base = $allSettings['settings']['tables'] ?? [];
-        $extra = $entrypointSettings['settings']['tables'] ?? [];
+        $result = $base;
+        $result['start'] = $entrypoint['start'] ?? $base['start'];
 
-        $tables = [];
         foreach ($this->tables as $table) {
-            $tables[$table]['count']        = $extra[$table]['count']        ?? $base[$table]['count']        ?? 1;
-            $tables[$table]['columns']      = $extra[$table]['columns']      ?? $base[$table]['columns']      ?? null;
-            $tables[$table]['transformers'] = $extra[$table]['transformers'] ?? $base[$table]['transformers'] ?? [];
-            $tables[$table]['filter']       = $extra[$table]['filter']       ?? $base[$table]['filter']       ?? null;
+            $b = $base[$table] ?? [];
+            $e = $entrypoint[$table] ?? [];
 
-            $tables[$table]['count'] = $this->define($tables[$table]['count']);
+            $be = $b['exclude_columns'] ?? [];
+            $ee = $e['exclude_columns'] ?? [];
+            $r['exclude_columns'] = array_unique(array_merge($be, $ee));
+            $r['columns']      = $e['columns']      ?? $b['columns']      ?? [];
+            $r['filter']       = $e['filter']       ?? $b['filter']       ?? null;
+            $r['count']        = $e['count']        ?? $b['count']        ?? null;
+            $r['transformers'] = $e['transformers'] ?? $b['transformers'] ?? [];
+            $r['tree']         = $e['tree']         ?? $b['tree']         ?? null;
+
+            $merged = array_filter($r, static fn($s) => $s !== null && $s !== []);
+            if ($merged) {
+                $result[$table] = $merged;
+            }
         }
 
-        $joins = $allSettings['settings']['joins'] ?? $entrypointSettings['settings']['joins'] ?? [];
+        $routeFilter = $this->mergeRouteSettings($base, $entrypoint);
+        if ($routeFilter) {
+            $result['route-settings'] = $routeFilter;
+        }
 
-        return ['settings' => ['tables' => $tables, 'joins' => $joins]];
+        return $result;
     }
 
-    private function define(int|string $count): int
+    private function mergeRouteSettings(array $base, array $entry): array
     {
-        $count = (string) $count;
-        $vals = explode('-', $count);
-        if (count($vals) === 1) {
-            return (int) Arr::first($vals);
+        $base = $base['route-settings'] ?? [];
+        $entry = $entry['route-settings'] ?? [];
+
+        $allKeys = [];
+
+        $baseK = [];
+        foreach ($base as $val) {
+            $route = implode('|', $val['route']);
+            $allKeys[] = $route;
+            $baseK[$route] = $val;
         }
 
-        return random_int((int) Arr::first($vals), (int) Arr::last($vals));
+        $entryK = [];
+        foreach ($entry as $val) {
+            $route = implode('|', $val['route']);
+            $allKeys[] = $route;
+            $entryK[$route] = $val;
+        }
+
+        $result = [];
+        $allKeys = array_unique($allKeys);
+        foreach ($allKeys as $key) {
+            $result[] = array_merge($baseK[$key] ?? [], $entryK[$key] ?? []);
+        }
+
+        return $result;
     }
 }

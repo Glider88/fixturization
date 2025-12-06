@@ -5,6 +5,30 @@ namespace Glider88\Fixturization\Common;
 readonly class Arr
 {
     /**
+     * @template K
+     * @template V
+     * @param array<K,V> $array
+     * @param positive-int $length
+     * @return array<K,V>
+     */
+    public static function sliceLast(array $array, int $length, bool $preserve_keys = false): array
+    {
+        return array_slice($array, -$length, $length, $preserve_keys);
+    }
+
+    /**
+     * @template K
+     * @template V
+     * @param array<K,V> $array
+     * @param positive-int $length
+     * @return array<K,V>
+     */
+    public static function sliceFirst(array $array, int $length, bool $preserve_keys = false): array
+    {
+        return array_slice($array, 0, $length, $preserve_keys);
+    }
+
+    /**
      * @template T
      * @param non-empty-array<T> $array
      * @return T
@@ -24,64 +48,27 @@ readonly class Arr
         return $array[array_key_last($array)];
     }
 
-    /**
-     * @template T
-     * @param non-empty-array<T> $array
-     * @return T
-     */
-    public static function head(array $array)
+    public static function rtrim(array $array, array $elements, ?int $length = null): array
     {
-        return self::first($array);
-    }
-
-    /**
-     * @template T
-     * @param array<T> $array
-     * @return array<T>
-     */
-    public static function tail(array $array): array
-    {
-        return array_slice($array, 1);
-    }
-
-    /**
-     * @param array $a
-     * @param callable(int|string, mixed): mixed $cb
-     * @return array
-     */
-    public static function walk(array $a, callable $cb): array
-    {
-        $b = [];
-        foreach ($a as $k => $v) {
-            $v = $cb($k, $v);
-            if (is_array($v)) {
-                $b[$k] = self::walk($v, $cb);
-            } else {
-                $b[$k] = $v;
-            }
-        }
-
-        return $b;
-    }
-
-    /**
-     * @template K
-     * @template T
-     * @param array<K,T> $array
-     * @return array<array<K,T>>
-     */
-    public static function slidingWindow(array $array, int $size, bool $preserveKeys = false, int $step = 1): array
-    {
-        $result = [];
-        $length = count($array);
-        foreach (range(0, $length, $step) as $offset) {
-            $window = array_slice($array, $offset, $size, $preserveKeys);
-            $result[] = $window;
-            if ($offset + $size >= $length) {
+        $arrLen = count($array);
+        $original = $array;
+        $count = 0;
+        while (count($array) >= 0) {
+            $last = array_pop($array);
+            if (! in_array($last, $elements, true)) {
                 break;
             }
+
+            if ($length !== null) {
+                $length -= 1;
+                if ($length < 0) {
+                    break;
+                }
+            }
+
+            $count += 1;
         }
 
-        return $result;
+        return array_slice($original, 0, $arrLen - $count, true);
     }
 }

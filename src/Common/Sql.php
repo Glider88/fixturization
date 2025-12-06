@@ -6,38 +6,25 @@ readonly class Sql
 {
     public static function fixOpVal($val): array
     {
+        $op = match (true) {
+            is_null($val)  => 'is',
+            is_array($val) => 'in',
+            default        => '=',
+        };
+
         $val = self::fixVal($val);
-
-        $op = '=';
-        if (is_null($val)) {
-            $op = 'is';
-        }
-
-        if (is_array($val)) {
-            $op = 'in';
-        }
 
         return [$op, $val];
     }
 
     public static function fixVal($val)
     {
-        if (is_string($val)) {
-            return "'$val'";
-        }
-
-        if (is_bool($val)) {
-            return $val ? 'true' : 'false';
-        }
-
-        if (is_null($val)) {
-            return 'null';
-        }
-
-        if (is_array($val)) {
-            return '(' . implode(',', array_map(self::fixVal(...), $val)) . ')';
-        }
-
-        return $val;
+        return match (true) {
+            is_string($val) => "'$val'",
+            is_bool($val)   => $val ? 'true' : 'false',
+            is_null($val)   => 'null',
+            is_array($val)  => '(' . implode(',', array_map(self::fixVal(...), $val)) . ')',
+            default         => $val,
+        };
     }
 }

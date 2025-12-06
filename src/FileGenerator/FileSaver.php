@@ -3,19 +3,22 @@
 namespace Glider88\Fixturization\FileGenerator;
 
 use Glider88\Fixturization\Config\Path;
+use Glider88\Fixturization\Spider\Result;
 use Symfony\Component\Yaml\Yaml;
 
 readonly class FileSaver
 {
     public function __construct(
         private Path $path,
+        private int $inline = 4,
+        private int $indent = 2,
     ) {}
     
     public function saveSchemaAutoDd(array $schema): void
     {
         $path = $this->path->schemaDbPath;
         $this->prepare($path);
-        file_put_contents($path, Yaml::dump($schema, 4, 2));
+        file_put_contents($path, Yaml::dump($schema, $this->inline, $this->indent));
     }
 
     public function saveFixtureSql(string $fixtures): void
@@ -25,11 +28,12 @@ readonly class FileSaver
         file_put_contents($path, $fixtures);
     }
 
-    public function saveFixtureYaml(array $fixtures): void
+    public function saveFixtureYaml(Result $result): void
     {
+        $fixtures = $result->result();
         $path = $this->path->fixtureYamlPath;
         $this->prepare($path);
-        file_put_contents($path, Yaml::dump($fixtures, 4, 2));
+        file_put_contents($path, Yaml::dump($fixtures, $this->inline, $this->indent));
     }
 
     private function prepare(?string $path): void

@@ -1,15 +1,34 @@
+base_settings:
+  country:
+    exclude_columns: ['last_update']
+
 entrypoints:
   -
-    routes:
-      - [rental, customer, address, city, country]
-      - [rental, customer, store, address, city, country]
-      - [rental, inventory, film, film_actor, actor]
-      - [rental, inventory, film, film_category, category]
-      - [rental, inventory, film, language]
-      - [rental, inventory, store, address, city, country]
-      - [rental, staff, address, city, country]
-      - [rental, staff, store, address, city, country]
-    settings:
-      joins:
-        - [rental, inventory, film]
-        - [city, country]
+    start: rental
+    rental:
+      count: 3
+      filter: "rental_date > '2022-06-30' and rental_date < '2022-07-06'"
+    route-settings:
+      -
+        route: [rental, staff]
+        filter: "first_name = 'Lavone'"
+  -
+    start: country
+    country:
+      columns: [country_id, last_update]
+      filter: "country = 'France'"
+    route-settings:
+        -
+          route: [staff, store, inventory]
+          filter: 'inventory_id > 50'
+  -
+    description: "only country and city"
+    start: country
+    country:
+      count: 5
+      filter: "country = 'United States'"
+    address:
+      count: 0
+  -
+    description: "multiple primary keys"
+    start: film_actor

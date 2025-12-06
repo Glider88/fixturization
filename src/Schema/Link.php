@@ -6,9 +6,9 @@ readonly class Link
 {
     public function __construct(
         public LinkType $type,
-        public string $ownTable,
-        public string $ownColumn, // ToDo: can be array
-        public string $linkTable,
-        public string $linkColumn, // ToDo: can be array
+        public string   $parentTable,
+        public string   $parentColumn,
+        public string   $table,
+        public string   $column,
     ) {}
 }

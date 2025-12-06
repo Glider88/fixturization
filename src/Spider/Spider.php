@@ -2,58 +2,56 @@
 
 namespace Glider88\Fixturization\Spider;
 
-use Glider88\Fixturization\Config\Entrypoint;
-use Glider88\Fixturization\Config\Settings;
+use Glider88\Fixturization\Common\Arr;
+use Glider88\Fixturization\Common\Traverse;
 use Glider88\Fixturization\Config\TableSettings;
-use Glider88\Fixturization\Database\DatabaseCached;
-use Glider88\Fixturization\Database\DatabaseInterface;
-use Glider88\Fixturization\Database\WhereLinkClause;
-use Glider88\Fixturization\Schema\Schema;
+use Glider88\Fixturization\Database\CacheInterface;
+use Glider88\Fixturization\Database\DatabaseEntrypointInterface;
+use Glider88\Fixturization\Database\DatabaseRowInterface;
+use Glider88\Fixturization\Database\Query\JoinClause;
+use Glider88\Fixturization\Database\Query\Query;
+use Glider88\Fixturization\Database\Query\SelectClause;
+use Glider88\Fixturization\Database\Query\WhereLinkClause;
 
 readonly class Spider
 {
     public function __construct(
-        private DatabaseInterface $db,
-        private DatabaseCached    $cache,
-        private Schema            $schema,
-        private ?int              $seed = null,
+        private DatabaseRowInterface | DatabaseEntrypointInterface $db,
+        private DatabaseRowInterface | CacheInterface $cache,
     ) {}
 
     /**
-     * @param array<Entrypoint> $entrypoints
-     * @return array<string, array<int|string, array>>
+     * @param list<Node> $startNodes
+     * @return list<Result>
      */
-    public function start(array $entrypoints): array
+    public function start(array $startNodes): array
     {
-        $this->setSeed();
-
         $results = [];
-        foreach ($entrypoints as $entrypoint) {
-            foreach ($entrypoint->roots as $root) {
-                $tableSchema = $this->schema->table($root->tableName);
-                $rows = $this->fetchRows($root->tableName, $root, $entrypoint->settings, true, []);
-                foreach ($rows as $row) {
-                    $whereClauses = [];
-                    foreach ($tableSchema->pk as $idCol) {
-                        $whereClauses[] = new WhereLinkClause($idCol, $row[$idCol]);
-                    }
-
-                    $results[] = $this->result($root, $entrypoint->settings, $whereClauses);
+        foreach ($startNodes as $node) {
+            $aliasToNode = $this->aliasToNode($node);
+            $query = $this->entrypointQuery($node);
+            $entrypoints = $this->db->entrypointIds($node, $query);
+            foreach ($entrypoints as $row) {
+                $whereClauses = [];
+                foreach ($row as $idCol => $idVal) {
+                    $whereClauses[] = new WhereLinkClause($node->alias, $idCol, $idVal);
                 }
+
+                $this->cache->fillCache($query, $whereClauses, $aliasToNode);
+                $results[] = $this->resultRec($node, $whereClauses, $aliasToNode);
             }
         }
 
-        return Result::mergeAll($results)->result();
+        return $results;
     }
 
     /** @param array<WhereLinkClause> $whereClauses */
-    private function result(Node $node, Settings $settings, array $whereClauses): Result
+    private function resultRec(Node $node, array $whereClauses, array $aliasToNode): Result
     {
-        $tableName = $node->tableName;
-        $tableSchema = $this->schema->table($tableName);
-        $tableSettings = $settings->tableSettings($tableName);
-        $tableRowsRaw = $this->fetchRows($tableName, $node, $settings, false, $whereClauses);
+        $tableSchema = $node->schema;
+        $tableSettings = $node->settings;
 
+        $tableRowsRaw = $this->cache->rows($node, $whereClauses);
         if (empty($tableRowsRaw)) {
             return Result::newEmpty();
         }
@@ -69,43 +67,87 @@ readonly class Spider
 
         $linkResults = [Result::new($tableSchema, $tableRows)];
         foreach ($node->children as $child) {
-            $links = $this->schema->links($node->tableName, $child->tableName);
             foreach ($tableRows as $tableRow) {
-                foreach ($links as $link) {
-                    $nextWhereClauses = new WhereLinkClause($link->linkColumn, $tableRow[$link->ownColumn]);
-                    $linkResults[] = $this->result($child, $settings, [$nextWhereClauses]);
-                }
+                $link = $child->link;
+                $nextWhereClauses = new WhereLinkClause($child->alias, $link->column, $tableRow[$link->parentColumn]);
+                $linkResults[] = $this->resultRec($child, [$nextWhereClauses], $aliasToNode);
             }
         }
 
         return Result::mergeAll($linkResults);
     }
 
-    private function setSeed(): void
+    private function entrypointQuery(Node $start): Query
     {
-        if ($this->seed !== null) {
-            mt_srand($this->seed);
-            $this->db->setSeed((float) "0.$this->seed");
+        $selects = [];
+        $wheres = [];
+        $passedNodes = [];
+        $joins = [];
+        foreach (Traverse::travelPath($start) as $path) {
+            $joinPath = $this->pathWithJoins($path);
+            $prev = null;
+            foreach ($joinPath as $node) {
+                if (array_key_exists($node->alias, $passedNodes)) {
+                    $prev = $node;
+                    continue;
+                }
+                $passedNodes[$node->alias] = true;
+
+                foreach ($node->settings->columns as $column) {
+                    $selects[] = new SelectClause($node->alias, $column);
+                }
+
+                if ($prev) {
+                    $joins[] = JoinClause::make($prev, $node);
+                }
+
+                if ($node->settings->whereFilter) {
+                    $wheres[] = $node->settings->whereFilter;
+                }
+
+                $prev = $node;
+            }
         }
+
+        return new Query(
+            select: $selects,
+            table: $start->name,
+            alias: $start->alias,
+            joins: $joins,
+            wheres: $wheres,
+            limit: $start->settings->count,
+        );
     }
 
-    // ToDo: fetchRow, processRow to class?
-    /**
-     * @param array<WhereLinkClause> $whereClauses
-     * @return array<array<string, mixed>>
-     */
-    private function fetchRows(string $tableName, Node $node, Settings $settings, bool $random, array $whereClauses): array
+    /** @return array<string, Node> */
+    private function aliasToNode(Node $start): array
     {
-        if ($node->joinIndex !== null) {
-            $this->cache->fetchCache($node->joinIndex, $settings, $random, $whereClauses);
+        $aliasToNode = [];
+        foreach (Traverse::travelDeep($start) as $node) {
+            $aliasToNode[$node->alias] = $node;
         }
 
-        $tableSettings = $settings->tableSettings($tableName);
-        if ($tableSettings->whereFilter !== null) {
-            $whereClauses[] = $tableSettings->whereFilter;
+        return $aliasToNode;
+    }
+
+    /**
+     * @param list<Node> $path
+     * @return list<Node>
+     */
+    private function pathWithJoins(array $path): array
+    {
+        $lastFilterIndex = null;
+        foreach ($path as $i => $node) {
+            if ($node->settings->whereFilter) {
+                $lastFilterIndex = $i;
+            }
         }
 
-        return $this->cache->rows($tableName, $tableSettings->columns, $tableSettings->count, $whereClauses, $random);
+        if ($lastFilterIndex === null) {
+            return [];
+        }
+
+        return Arr::sliceFirst($path, $lastFilterIndex + 1);
     }
 
     /**

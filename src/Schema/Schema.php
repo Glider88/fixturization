@@ -2,36 +2,72 @@
 
 namespace Glider88\Fixturization\Schema;
 
+use Glider88\Fixturization\Common\Arr;
+use LogicException;
+
 readonly class Schema
 {
-    /**
-     * @param array<string, TableMeta> $tableToMeta
-     * @param array<string, array<string, array<Link>>> $links
-     */
-    public function __construct(
-        private array $tableToMeta,
-        private array $links,
-    ) {}
+    /** @var array<string, TableSchema> */
+    private array $tableToSchema;
 
-    public function table(string $tableName): TableMeta
+    /** @var array<string, array<string, array<Link>>> */
+    private array $links;
+
+    public function __construct(array $schema) {
+        $tableToSchema = [];
+        foreach ($schema as $conf) {
+            $tableToSchema[$conf['name']] = new TableSchema($conf['name'], $conf['pk'], $conf['columns']);
+        }
+        $this->tableToSchema = $tableToSchema;
+
+        $links = [];
+        foreach ($schema as $tableName => $tableConf) {
+            if (array_key_exists('foreign_keys', $tableConf)) {
+                foreach ($tableConf['foreign_keys'] as $fkColumn => $refTable) {
+                    if (count($schema[$refTable]['pk']) > 1) {
+                        throw new LogicException("Multiple primary keys for table: $refTable, reference to $tableName");
+                    }
+
+                    $refPk = Arr::first($schema[$refTable]['pk']);
+
+                    $links[$tableName][$refTable][] = new Link(
+                        LinkType::ManyToOne,
+                        $tableName,
+                        $fkColumn,
+                        $refTable,
+                        $refPk,
+                    );
+                    $links[$refTable][$tableName][] = new Link(
+                        LinkType::OneToMany,
+                        $refTable,
+                        $refPk,
+                        $tableName,
+                        $fkColumn,
+                    );
+                }
+            }
+        }
+        $this->links = $links;
+    }
+
+    public function table(string $tableName): TableSchema
     {
-        if (! array_key_exists($tableName, $this->tableToMeta)) {
+        if (! array_key_exists($tableName, $this->tableToSchema)) {
             throw new \InvalidArgumentException("Table '$tableName' does not exist in Schema");
         }
 
-        return $this->tableToMeta[$tableName];
+        return $this->tableToSchema[$tableName];
     }
 
-    /** @return array<TableMeta> */
+    /** @return list<string> */
     public function allTables(): array
     {
-        return $this->tableToMeta;
+        return array_keys($this->tableToSchema);
     }
 
-    // ToDo: null or []?
-    /** @return array<Link>|null */
-    public function links(string $tableFrom, string $tableTo): ?array
+    /** @return list<Link> */
+    public function links(string $tableFrom, string $tableTo): array
     {
-        return $this->links[$tableFrom][$tableTo] ?? null;
+        return $this->links[$tableFrom][$tableTo] ?? [];
     }
 }

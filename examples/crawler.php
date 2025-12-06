@@ -3,20 +3,21 @@
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use Doctrine\DBAL\DriverManager;
-use Glider88\Fixturization\Config\EntrypointsFactory;
+use Glider88\Fixturization\Common\Yaml;
 use Glider88\Fixturization\Config\Path;
 use Glider88\Fixturization\Config\SettingsFactory;
 use Glider88\Fixturization\Config\SettingsMerger;
 use Glider88\Fixturization\Database\DatabaseCached;
-use Glider88\Fixturization\Database\Cache;
-use Glider88\Fixturization\Database\PostgreSQL;
+use Glider88\Fixturization\Database\Postgres\PostgreSQL;
 use Glider88\Fixturization\FileGenerator\FileSaver;
 use Glider88\Fixturization\FileGenerator\PostgresSqlTransformer;
-use Glider88\Fixturization\Schema\SchemaFactory;
+use Glider88\Fixturization\Schema\Schema;
 use Glider88\Fixturization\Schema\SchemaMerger;
+use Glider88\Fixturization\Spider\NodeFactory;
+use Glider88\Fixturization\Spider\Result;
 use Glider88\Fixturization\Spider\Spider;
 use Glider88\Fixturization\Transformer\ColumnShuffle;
-use Symfony\Component\Yaml\Yaml;
+use Psr\Log\AbstractLogger;
 
 const SQL_TARGET = 'sql';
 const YAML_TARGET = 'yaml';
@@ -49,34 +50,48 @@ $connection = DriverManager::getConnection([
     'driver'   => 'pdo_pgsql',
     'charset'  => 'utf8',
 ]);
-$psql = new PostgreSQL($connection);
 
-$parseFn = static fn(?string $p) => $p === null ? [] : (Yaml::parseFile($p) ?? []);
-$schemaFactory = new SchemaFactory(
-    $parseFn($path->schemaDbPath),
-    $parseFn($path->schemaManualPath),
-    new SchemaMerger(),
-);
-$schema = $schemaFactory->create();
+$consoleLogger = new class() extends AbstractLogger {
+    public function log($level, \Stringable|string $message, array $context = []): void
+    {
+        echo "$message\n";
+    }
+};
+
+$psql = new PostgreSQL($connection, $consoleLogger, dryRun: false, random: true, seed: 0.42);
+
+$schemaDb = Yaml::parse($path->schemaDbPath);
+$schemaManual = Yaml::parse($path->schemaManualPath);
+$schemaConf = SchemaMerger::merge($schemaDb, $schemaManual);
+
+$schema = new Schema($schemaConf);
 
 $transformersMapper = [
     'column_shuffle' => new ColumnShuffle(),
 ];
+
+$settingsMerger = new SettingsMerger($schema->allTables());
+$config = Yaml::parse($path->configPath);
+$entrypoints = $settingsMerger->enrichSettings($config);
+
 $settingsFactory = new SettingsFactory($schema, $transformersMapper);
-$settingsMerger = new SettingsMerger($schema);
-$config = Yaml::parseFile($path->configPath) ?? [];
-$entrypointFactory = new EntrypointsFactory($config, $settingsMerger, $settingsFactory);
-$entrypoints = $entrypointFactory->create();
+$nodeFactory = new NodeFactory($schema, $settingsFactory);
 
-$cache = new Cache($connection, $schema, );
-$dbCached = new DatabaseCached($psql, $cache);
+$nodes = [];
+foreach ($entrypoints as $entrypointConf) {
+    $nodes[] = $nodeFactory->create($entrypointConf);
+}
 
-$spider = new Spider($psql, $dbCached, $schema, 42);
-$result = $spider->start($entrypoints);
+$dbCached = new DatabaseCached($psql);
+
+$spider = new Spider($psql, $dbCached);
+$results = $spider->start($nodes);
+// $results += Result::new(additional data from custom sql's)
+$result = Result::mergeAll($results);
 
 $fixtureSaver = new FileSaver($path);
 if (in_array(SQL_TARGET, $targets, true)) {
-    $sql = (new PostgresSqlTransformer())->sql($result);
+    $sql = PostgresSqlTransformer::sql($result);
     $fixtureSaver->saveFixtureSql($sql);
 }
 

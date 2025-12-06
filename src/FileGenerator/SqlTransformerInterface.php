@@ -2,7 +2,9 @@
 
 namespace Glider88\Fixturization\FileGenerator;
 
+use Glider88\Fixturization\Spider\Result;
+
 interface SqlTransformerInterface
 {
-    public function sql(array $data): string;
+    public static function sql(Result $result): string;
 }

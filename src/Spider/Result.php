@@ -2,10 +2,12 @@
 
 namespace Glider88\Fixturization\Spider;
 
-use Glider88\Fixturization\Schema\TableMeta;
+use Glider88\Fixturization\Schema\TableSchema;
 
 class Result
 {
+    public const MULTI_PK_SEPARATOR = '|';
+
     private function __construct(
         /** @var array<string, array<int|string, array>> */
         public array $tableToRowIdToRow,
@@ -17,15 +19,15 @@ class Result
     }
 
     /** @param array<array> $rows */
-    public static function new(TableMeta $schema, array $rows): Result
+    public static function new(TableSchema $schema, array $rows): Result
     {
         $result = [];
         foreach ($rows as $row) {
             $ids = [];
-            foreach ($schema->pk as $pk) {
+            foreach ($schema->pks as $pk) {
                 $ids[] = $row[$pk];
             }
-            $id = implode('|', $ids);
+            $id = implode(self::MULTI_PK_SEPARATOR, $ids);
             $result[$schema->name][$id] = $row;
         }
 
@@ -50,8 +52,9 @@ class Result
     public function merge(Result $result): void
     {
         foreach ($result->result() as $tableName => $rows) {
-            foreach ($rows as $id => $row) {
-                $this->tableToRowIdToRow[$tableName][$id] = $row;
+            foreach ($rows as $id => $newRow) {
+                $row = $this->tableToRowIdToRow[$tableName][$id] ?? [];
+                $this->tableToRowIdToRow[$tableName][$id] = array_merge($row, $newRow);
             }
         }
     }

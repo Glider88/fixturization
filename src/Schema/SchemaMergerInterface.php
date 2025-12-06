@@ -4,5 +4,5 @@ namespace Glider88\Fixturization\Schema;
 
 interface SchemaMergerInterface
 {
-    public function merge(array ...$schemas): array;
+    public static function merge(array ...$schemas): array;
 }

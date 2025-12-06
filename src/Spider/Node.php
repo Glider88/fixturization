@@ -2,11 +2,18 @@
 
 namespace Glider88\Fixturization\Spider;
 
+use Glider88\Fixturization\Config\TableSettings;
+use Glider88\Fixturization\Schema\Link;
+use Glider88\Fixturization\Schema\TableSchema;
+
 readonly class Node {
-    /** @param array<Node> $children */
+    /** @param list<Node> $children */
     public function __construct(
-        public string $tableName,
-        public ?int $joinIndex = null,
-        public array $children = [],
+        public string        $name,
+        public string        $alias,
+        public ?Link         $link,
+        public TableSchema   $schema,
+        public TableSettings $settings,
+        public array         $children = [],
     ) {}
 }

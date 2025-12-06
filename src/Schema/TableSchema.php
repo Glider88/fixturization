@@ -2,15 +2,15 @@
 
 namespace Glider88\Fixturization\Schema;
 
-readonly class TableMeta
+readonly class TableSchema
 {
     /**
-     * @param array<string> $pk
-     * @param array<string> $cols
+     * @param list<string> $pks
+     * @param list<string> $cols
      */
     public function __construct(
         public string $name,
-        public array  $pk,
+        public array  $pks,
         public array  $cols,
     ) {}
 }

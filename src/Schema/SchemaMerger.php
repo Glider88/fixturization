@@ -4,28 +4,26 @@ namespace Glider88\Fixturization\Schema;
 
 class SchemaMerger implements SchemaMergerInterface
 {
-    public function merge(array ...$schemas): array
+    public static function merge(array ...$schemas): array
     {
-        /** @var array<string> $allTables */
-        $allTables = array_unique(
-            array_merge(...array_map(static fn(array $c) => array_keys($c), $schemas))
-        );
+        $allTables = self::allTables($schemas);
 
         $result = [];
         foreach ($allTables as $table) {
-            $pk = $this->takeLast('pk', $table, $schemas);
+            $pk = self::takeLast('pk', $table, $schemas);
             if ($pk === null) {
                 throw new \InvalidArgumentException("Missing 'pk' key for '$table'");
             }
-            $result[$table]['pk'] = $pk;
-            $result[$table]['columns'] = $this->takeLast('columns', $table, $schemas) ?: [];
-            $result[$table]['foreign_keys'] = $this->mergeSettings('foreign_keys', $table, $schemas);
+            $result[$table]['name'] = $table;
+            $result[$table]['pk'] = (array) $pk;
+            $result[$table]['columns'] = self::takeLast('columns', $table, $schemas) ?: [];
+            $result[$table]['foreign_keys'] = self::mergeForeignKeys($table, $schemas);
         }
 
         return $result;
     }
 
-    private function takeLast(string $key, string $table, array $configs): mixed
+    private static function takeLast(string $key, string $table, array $configs): mixed
     {
         $reversed = array_reverse($configs);
         foreach ($reversed as $tableConf) {
@@ -38,13 +36,29 @@ class SchemaMerger implements SchemaMergerInterface
         return null;
     }
 
-    private function mergeSettings(string $key, string $table, array $configs): array
+    private static function mergeForeignKeys(string $table, array $configs): array
     {
         $results = [];
         foreach ($configs as $tableConf) {
-            $results[] = $tableConf[$table][$key] ?? [];
+            $results[] = $tableConf[$table]['foreign_keys'] ?? [];
         }
 
         return array_merge(...$results);
+    }
+
+    /**
+     * @param array<string, mixed> $schemas
+     * @return list<string>
+     */
+    private static function allTables(array $schemas): array
+    {
+        $allTables = [];
+        foreach ($schemas as $schema) {
+            foreach ($schema as $table => $_) {
+                $allTables[] = $table;
+            }
+        }
+
+        return array_unique($allTables);
     }
 }
