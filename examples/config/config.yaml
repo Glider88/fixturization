@@ -30,7 +30,7 @@ entrypoints:
     address:
       count: 0
   -
-    description: "multiple primary keys"
+    description: "multiple primary keys for entrypoint table"
     start: film_actor
   -
     description: "use transformer"

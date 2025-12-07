@@ -1,14 +1,19 @@
 # Fixturization
-Create database for dev from production or rc.
 
-## Installation:
+Select the start of the table crawl, after which the spider will follow the table refs and collect data.
+Determine which columns are needed, which filters to use, how many rows select from the table, and how to transform the data after fetching.
+This data can be used for fixtures or tests.
+
+### Installation:
 ```shell
 composer require glider88/fixturization
 ```
 
-## Run example:
+### Learn by example:
 
-Get example data:
+See how you can use library in `examples/`
+
+Get data:
 ```shell
 wget https://raw.githubusercontent.com/devrimgunduz/pagila/refs/heads/master/pagila-schema.sql -P .docker/postgres
 ```
@@ -22,22 +27,20 @@ sed -i -e 's/OWNER TO postgres/OWNER TO fixturization/g' .docker/postgres/pagila
 ```
 
 Start docker:
-
-First time:
 ```shell
-bin/reup
+bin/reup  # first time
 ```
-Next times:
 ```shell
-bin/up
+bin/up  # next times
 ```
 
 Generate schema from database:
 ```shell
 bin/sh php examples/schema.php psql
 ```
+Additional description of the schema that is not in the database: `examples/var/schema/manual.yaml`
 
-Generate dump (sql and yaml formats):
+Generate dump (support sql and yaml formats):
 ```shell
 bin/sh php examples/crawler.php sql yaml
 ```
