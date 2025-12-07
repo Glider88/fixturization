@@ -1,6 +1,5 @@
 {
   "name": "glider88/fixturization",
-  "version": "0.0.1",
   "description": "Create fixtures from database",
   "keywords": ["fixtures"],
   "type": "library",
