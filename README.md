@@ -28,7 +28,7 @@ sed -i -e 's/OWNER TO postgres/OWNER TO fixturization/g' .docker/postgres/pagila
 
 Start docker:
 ```shell
-bin/reup  # first time
+bin/re  # first time
 ```
 ```shell
 bin/up  # next times
