@@ -69,7 +69,16 @@ readonly class NodeFactory
             $len = count($route['route']);
             $last = Arr::sliceLast($path, $len);
             if ($route['route'] === $last) {
-                return array_merge($result, $route);
+                $merged = [];
+                if (array_key_exists('filter', $route) || array_key_exists('filter', $result)) {
+                    $merged['filter'] = $route['filter'] ?? $result['filter'];
+                }
+
+                if (array_key_exists('filter', $route) || array_key_exists('filter', $result)) {
+                    $merged['count'] = $route['count'] ?? $result['count'];
+                }
+
+                return $merged;
             }
         }
 

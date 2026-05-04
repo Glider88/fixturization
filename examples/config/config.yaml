@@ -30,5 +30,19 @@ entrypoints:
     address:
       count: 0
   -
-    description: "multiple primary keys"
+    description: "multiple primary keys for entrypoint table"
     start: film_actor
+  -
+    description: "use transformer"
+    start: payment
+    payment:
+      count: 10
+      transformers:
+        amount: ['column_shuffle']
+
+
+#entrypoints:
+#  -
+#    start: country
+#    city:
+#      tree: 3   # this allows route: country-city-city-city-address, if city were recursive
