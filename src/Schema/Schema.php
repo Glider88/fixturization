@@ -15,8 +15,8 @@ readonly class Schema
 
     public function __construct(array $schema) {
         $tableToSchema = [];
-        foreach ($schema as $conf) {
-            $tableToSchema[$conf['name']] = new TableSchema($conf['name'], $conf['pk'], $conf['columns']);
+        foreach ($schema as $table => $conf) {
+            $tableToSchema[$table] = new TableSchema($table, $conf['pk'], $conf['columns']);
         }
         $this->tableToSchema = $tableToSchema;
 
@@ -31,18 +31,18 @@ readonly class Schema
                     $refPk = Arr::first($schema[$refTable]['pk']);
 
                     $links[$tableName][$refTable][] = new Link(
-                        LinkType::ManyToOne,
-                        $tableName,
-                        $fkColumn,
-                        $refTable,
-                        $refPk,
+                        type: LinkType::ManyToOne,
+                        parentTable: $tableName,
+                        parentColumn: $fkColumn,
+                        table: $refTable,
+                        column: $refPk,
                     );
                     $links[$refTable][$tableName][] = new Link(
-                        LinkType::OneToMany,
-                        $refTable,
-                        $refPk,
-                        $tableName,
-                        $fkColumn,
+                        type: LinkType::OneToMany,
+                        parentTable: $refTable,
+                        parentColumn: $refPk,
+                        table: $tableName,
+                        column: $fkColumn,
                     );
                 }
             }

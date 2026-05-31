@@ -1,14 +1,14 @@
 services:
-  php-cli:
-    container_name: fixturization-php-cli
-    build: .docker/php-cli
-    image: fixturization/php-cli
+  php:
+    container_name: fixturization-php
+    build: .docker/php
+    image: fixturization/php
     user: docker
     extra_hosts:
       - host.docker.internal:host-gateway
     volumes:
-      - .docker/php-cli/xdebug.ini:/usr/local/etc/php/conf.d/xdebug.ini
-      - .docker/php-cli/custom-php.ini:/usr/local/etc/php/conf.d/custom-php.ini
+      - .docker/php/xdebug.ini:/usr/local/etc/php/conf.d/xdebug.ini
+      - .docker/php/custom-php.ini:/usr/local/etc/php/conf.d/custom-php.ini
       - .:/usr/src/app
     environment:
         PHP_IDE_CONFIG: "serverName=docker-fixturization-php"

@@ -14,7 +14,7 @@ class SchemaMerger implements SchemaMergerInterface
             if ($pk === null) {
                 throw new \InvalidArgumentException("Missing 'pk' key for '$table'");
             }
-            $result[$table]['name'] = $table;
+
             $result[$table]['pk'] = (array) $pk;
             $result[$table]['columns'] = self::takeLast('columns', $table, $schemas) ?: [];
             $result[$table]['foreign_keys'] = self::mergeForeignKeys($table, $schemas);

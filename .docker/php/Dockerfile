@@ -17,4 +17,4 @@ RUN addgroup --gid "$GID" "$GROUPNAME" \
 
 RUN mv "$PHP_INI_DIR/php.ini-development" "$PHP_INI_DIR/php.ini"
 
-ENTRYPOINT ["./.docker/php-cli/entrypoint.sh"]
+ENTRYPOINT ["./.docker/php/entrypoint.sh"]

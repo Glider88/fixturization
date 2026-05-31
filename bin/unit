@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
 
 args="$@"
-docker compose exec --user docker php-cli sh -c "vendor/phpunit/phpunit/phpunit $args"
+if [ -z "$args" ]; then
+    docker compose exec --user docker php sh -c "vendor/phpunit/phpunit/phpunit --configuration phpunit.xml"
+else
+    docker compose exec --user docker php sh -c "vendor/phpunit/phpunit/phpunit --configuration phpunit.xml --filter $args"
+fi

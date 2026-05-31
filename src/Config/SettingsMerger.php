@@ -33,7 +33,7 @@ readonly class SettingsMerger
 
             $be = $b['exclude_columns'] ?? [];
             $ee = $e['exclude_columns'] ?? [];
-            $r['exclude_columns'] = array_unique(array_merge($be, $ee));
+            $r['exclude_columns'] = array_values(array_unique(array_merge($be, $ee)));
             $r['columns']      = $e['columns']      ?? $b['columns']      ?? [];
             $r['filter']       = $e['filter']       ?? $b['filter']       ?? null;
             $r['count']        = $e['count']        ?? $b['count']        ?? null;

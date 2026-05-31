@@ -75,7 +75,7 @@ readonly class NodeFactory
                 }
 
                 if (array_key_exists('filter', $route) || array_key_exists('filter', $result)) {
-                    $merged['count'] = $route['count'] ?? $result['count'];
+                    $merged['count'] = $route['count'] ?? $result['count'] ?? 1;
                 }
 
                 return $merged;
